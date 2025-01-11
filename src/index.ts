@@ -1,8 +1,6 @@
 import { LinkedInScraper } from "./login";
 
 async function main() {
-  console.log("🟡 Connecting to a scraping browser");
-
   const scraper = new LinkedInScraper();
 
   try {

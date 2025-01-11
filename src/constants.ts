@@ -19,7 +19,7 @@ export const browserDefaults = {
     "--disable-background-timer-throttling",
     "--disable-backgrounding-occluded-windows",
     "--disable-renderer-backgrounding",
-    "--window-size=1920,1080",
+    // "--window-size=1920,1080",
   ],
   slowMo: 50,
   // timeout: 30000,
