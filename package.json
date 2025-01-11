@@ -12,11 +12,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "playwright": "^1.49.1"
+    "playwright": "^1.49.1",
+    "rimraf": "^6.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
-    "rimraf": "^6.0.1",
     "typescript": "^5.7.3"
   }
 }

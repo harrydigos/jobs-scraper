@@ -1,53 +1,51 @@
-import { chromium, BrowserContext } from "playwright";
+import { chromium, Page } from "playwright";
+import { browserDefaults, LI_URLS } from "./constants";
 
-const SESSION_COOKIE = process.env.LI_AT_COOKIE;
+class LinkedInScraper {
+  private page: Page | null = null;
 
-const LI_URLS = {
-  home: "https://www.linkedin.com",
-  jobs: "https://www.linkedin.com/jobs",
-  jobsSearch: "https://www.linkedin.com/jobs/search",
-} as const;
-
-async function isAuthenticatedSession(ctx: BrowserContext) {
-  const cookies = await ctx.cookies();
-  return !!cookies.find((c) => c.value === SESSION_COOKIE);
-}
-
-export async function loginWithCookies() {
-  if (!SESSION_COOKIE) {
-    throw new Error("LinkedIn cookie is missing");
+  private async _isLoggedIn() {
+    return this.page
+      ?.locator("a.global-nav__primary-link--active")
+      .first()
+      .isVisible();
   }
 
-  const browser = await chromium.launch({ headless: false });
+  async initialize(liAtCookie: string) {
+    const browser = await chromium.launch(browserDefaults);
 
-  console.log("🟢 Connected, navigating...");
+    console.log("🟢 Connected, navigating...");
 
-  const page = await browser.newPage();
+    const ctx = await browser.newContext();
 
-  await page.goto(LI_URLS.home, { waitUntil: "load" });
+    await ctx.addCookies([
+      {
+        name: "li_at",
+        value: liAtCookie,
+        domain: ".linkedin.com",
+        path: "/",
+      },
+    ]);
 
-  console.log("🟢 Navigated to LinkedIn");
+    this.page = await ctx.newPage();
 
-  await page.screenshot({ path: "media/debug.png", fullPage: true });
+    await this.page.goto(LI_URLS.home);
 
-  const ctx = await browser.newContext();
+    if (!this._isLoggedIn()) {
+      throw new Error(
+        "🔴 Authentication failed. Please check your li_at cookie.",
+      );
+    }
 
-  await ctx.addCookies([
-    {
-      name: "li_at",
-      value: SESSION_COOKIE,
-      domain: ".www.linkedin.com",
-      path: "/",
-    },
-  ]);
-
-  await page.reload();
-  console.log(await ctx.cookies());
-
-  const isAuthed = await isAuthenticatedSession(ctx);
-  if (!isAuthed) {
-    return { exit: true, browser, page };
+    console.log("🟢 Successfully authenticated!");
   }
 
-  return { browser, page, exit: false };
+  async close() {
+    if (this.page) {
+      await this.page.context().browser()?.close();
+      this.page = null;
+    }
+  }
 }
+
+export { LinkedInScraper };

@@ -1,22 +1,16 @@
-import { loginWithCookies } from "./login";
+import { LinkedInScraper } from "./login";
 
 async function main() {
   console.log("🟡 Connecting to a scraping browser");
+
+  const scraper = new LinkedInScraper();
+
   try {
-    const { exit, browser } = await loginWithCookies();
-
-    if (exit) {
-      console.error(
-        "Authentication failed. Please check your LinkedIn cookie.",
-      );
-      return;
-    }
-
-    console.log("Successfully authenticated!");
-
-    await browser.close();
-  } catch (e) {
-    console.error("Error occurred:", e);
+    await scraper.initialize(process.env.LI_AT_COOKIE!);
+  } catch (error) {
+    console.error("Error:", error);
+  } finally {
+    await scraper.close();
   }
 }
 
