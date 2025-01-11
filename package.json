@@ -6,7 +6,7 @@
   "scripts": {
     "clean": "rimraf .dist/*",
     "build": "pnpm run clean && npx tsc ./src/index.ts --outDir .dist/",
-    "start": "pnpm run build && node .dist/index.js"
+    "start": "pnpm run build && node --env-file=.env .dist/index.js"
   },
   "keywords": [],
   "author": "",
