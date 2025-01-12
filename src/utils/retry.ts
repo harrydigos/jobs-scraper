@@ -5,6 +5,16 @@ export type RetryResponse = {
 
 export type RetryOptions = {
   maxAttempts: number;
+  /**
+   * Base delay in milliseconds between retry attempts.
+   * The actual delay will increase exponentially with each attempt.
+   *
+   * @example
+   * // With delayMs = 1000:
+   * // 1st retry: 1 second delay
+   * // 2nd retry: 2 seconds delay
+   * // 3rd retry: 4 seconds delay
+   */
   delayMs: number;
   onRetry?: (error: Error | string, attempt: number) => void;
   timeout?: number;

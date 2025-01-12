@@ -23,28 +23,32 @@ class LinkedInScraper {
   }
 
   private async _paginate(paginationSize = 25, timeout = 2000) {
+    if (!this._page) {
+      throw new Error("🔴 Failed to load page");
+    }
+
+    const url = new URL(this._page.url());
+    const offset = parseInt(url.searchParams.get("start") || "0", 10);
+    url.searchParams.set("start", `${offset + paginationSize}`);
+
+    await this._page.goto(url.toString(), {
+      waitUntil: "load",
+    });
+
     return retry(
       async () => {
-        if (!this._page) {
-          throw new Error("🔴 Failed to load page");
+        if (!(await this._loadJobs())) {
+          throw new Error("🔴 Could not load jobs");
         }
 
-        const url = new URL(this._page.url());
-        const offset = parseInt(url.searchParams.get("start") || "0", 10);
-        url.searchParams.set("start", `${offset + paginationSize}`);
-
-        await this._page.goto(url.toString(), { waitUntil: "load" });
-
-        const loaded = await this._loadJobs();
-
-        return { success: !!loaded };
+        return { success: true as boolean };
       },
       {
         maxAttempts: 3,
         delayMs: 200,
         timeout,
         onRetry: (error, attempt) => {
-          console.log(`Pagination attempt ${attempt} failed: ${error}`);
+          console.log(`🔴 Pagination attempt ${attempt} failed: ${error}`);
         },
       },
     );
@@ -99,55 +103,80 @@ class LinkedInScraper {
 
     await this._takeScreenshot("Search jobs page");
 
-    let jobsTot = await this._page.evaluate(
-      (s) => document.querySelectorAll(s).length,
-      SELECTORS.jobs,
-    );
+    const jobs: any[] = [];
+    let processedJobs = 0;
 
-    if (jobsTot === 0) {
-      await this._takeScreenshot("🔴 No jobs found");
-      return [];
-    }
+    while (processedJobs < limit) {
+      let totalJobs = await this._loadJobs();
 
-    let jobIndex = 0;
-
-    // Jobs loop
-    while (jobIndex < limit) {
-      console.log("loop");
-      await sleep(1000);
-
-      try {
-        await this._page?.evaluate(
-          ({ jobsSelector, linkSelector, jobIndex }) => {
-            const link = document
-              .querySelectorAll(jobsSelector)
-              ?.[jobIndex]?.querySelector(linkSelector) as HTMLElement;
-            link.scrollIntoView();
-            link.click();
-          },
-          {
-            jobsSelector: SELECTORS.jobs,
-            linkSelector: SELECTORS.jobLink,
-            jobIndex,
-          },
-        );
-      } catch {
-        jobIndex++;
-        continue;
+      if (!totalJobs) {
+        await this._takeScreenshot("🔴 No jobs found");
+        return jobs;
       }
 
-      jobIndex++;
+      let jobIndex = 0;
+
+      while (jobIndex < totalJobs && processedJobs < limit) {
+        console.log(
+          "loop",
+          "jobIndex",
+          jobIndex,
+          "processedJobs",
+          processedJobs,
+        );
+        await sleep(500);
+
+        try {
+          await this._page?.evaluate(
+            ({ jobsSelector, linkSelector, jobIndex }) => {
+              const link = document
+                .querySelectorAll(jobsSelector)
+                ?.[jobIndex]?.querySelector(linkSelector) as HTMLElement;
+              link.scrollIntoView();
+              // link.click();
+            },
+            {
+              jobsSelector: SELECTORS.jobs,
+              linkSelector: SELECTORS.jobLink,
+              jobIndex,
+            },
+          );
+        } catch {
+          jobIndex++;
+          processedJobs++;
+          continue;
+        }
+
+        jobIndex++;
+        processedJobs++;
+
+        if (
+          processedJobs < limit &&
+          jobIndex === totalJobs &&
+          totalJobs < 25 // pagination size
+        ) {
+          const loadJobsResult = await this._loadJobs();
+
+          if (!!loadJobsResult) {
+            totalJobs = loadJobsResult;
+          }
+        }
+
+        if (jobIndex === totalJobs) {
+          break;
+        }
+      }
+
+      if (processedJobs === limit) {
+        console.log("🟢 Job limit reached");
+        break;
+      }
+
+      if (!(await this._paginate()).success) {
+        await this._takeScreenshot("🔴 Failed to paginate jobs");
+        break;
+      }
     }
-    //
-    // await this._paginate();
-    // await sleep(2000);
-    // await this._paginate();
-    // // await sleep(2000);
-    // // await this._paginate();
-    //
-    // // if (!paginationResult.success) {
-    // //   break;
-    // // }
   }
 
   async close() {
