@@ -1,5 +1,4 @@
-import { writeFile } from "node:fs/promises";
-import { LinkedInScraper } from "./login";
+import { LinkedInScraper } from "./linkedin-scraper";
 
 async function main() {
   const scraper = new LinkedInScraper();
