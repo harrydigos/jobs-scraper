@@ -22,7 +22,7 @@ class LinkedInScraper {
       .isVisible());
   }
 
-  private async _paginate(paginationSize = 25, timeout = 2000) {
+  private async _paginate(paginationSize = 25) {
     if (!this._page) {
       throw new Error("🔴 Failed to load page");
     }
@@ -34,24 +34,6 @@ class LinkedInScraper {
     await this._page.goto(url.toString(), {
       waitUntil: "load",
     });
-
-    return retry(
-      async () => {
-        if (!(await this._loadJobs())) {
-          throw new Error("🔴 Could not load jobs");
-        }
-
-        return { success: true as boolean };
-      },
-      {
-        maxAttempts: 3,
-        delayMs: 200,
-        timeout,
-        onRetry: (error, attempt) => {
-          console.log(`🔴 Pagination attempt ${attempt} failed: ${error}`);
-        },
-      },
-    );
   }
 
   async initialize(liAtCookie: string) {
@@ -88,9 +70,56 @@ class LinkedInScraper {
   }
 
   private async _loadJobs() {
-    return this._page?.evaluate(
-      (s) => document.querySelectorAll(s).length,
-      SELECTORS.jobs,
+    return retry(
+      async () => {
+        if (!this._page) {
+          throw new Error("🔴 Failed to load page");
+        }
+
+        // Wait for all the skeletons to be removed before starting to scroll
+        await Promise.allSettled(
+          [
+            ".scaffold-skeleton",
+            ".scaffold-skeleton-container",
+            ".scaffold-skeleton-entity",
+            ".job-card-container__ghost-placeholder",
+          ].map((selector) =>
+            this._page?.waitForSelector(selector, {
+              timeout: 3000,
+              state: "detached",
+            }),
+          ),
+        );
+
+        let count = await this._page.locator(SELECTORS.jobs).count();
+        let lastItemLocator = this._page.locator(SELECTORS.jobs).last();
+
+        // Keep scrolling to the last item into view until no more items are loaded
+        while (true) {
+          await lastItemLocator.scrollIntoViewIfNeeded();
+          await this._page.waitForTimeout(200);
+          const currentCount = await this._page.locator(SELECTORS.jobs).count();
+
+          console.log({ count });
+          if (currentCount === count) {
+            break; // No new items loaded, exit
+          }
+
+          count = currentCount;
+          lastItemLocator = this._page.locator(SELECTORS.jobs).last();
+        }
+
+        // await lastItemLocator
+        //   .locator(SELECTORS.jobLink)
+        //   .scrollIntoViewIfNeeded();
+
+        return { success: true as boolean, totalJobs: count };
+      },
+      {
+        maxAttempts: 3,
+        delayMs: 300,
+        timeout: 30000,
+      },
     );
   }
 
@@ -107,9 +136,10 @@ class LinkedInScraper {
     let processedJobs = 0;
 
     while (processedJobs < limit) {
-      let totalJobs = await this._loadJobs();
+      const { totalJobs, success: jobsSuccess } = await this._loadJobs();
+      console.log({ totalJobs });
 
-      if (!totalJobs) {
+      if (!jobsSuccess) {
         await this._takeScreenshot("🔴 No jobs found");
         return jobs;
       }
@@ -124,47 +154,35 @@ class LinkedInScraper {
           "processedJobs",
           processedJobs,
         );
-        await sleep(500);
+        // await sleep(500);
 
-        try {
-          await this._page?.evaluate(
-            ({ jobsSelector, linkSelector, jobIndex }) => {
-              const link = document
-                .querySelectorAll(jobsSelector)
-                ?.[jobIndex]?.querySelector(linkSelector) as HTMLElement;
-              link.scrollIntoView();
-              // link.click();
-            },
-            {
-              jobsSelector: SELECTORS.jobs,
-              linkSelector: SELECTORS.jobLink,
-              jobIndex,
-            },
-          );
-        } catch {
-          jobIndex++;
-          processedJobs++;
-          continue;
-        }
+        // await this._page?.evaluate(
+        //   async ({ jobsSelector, linkSelector, jobIndex }) => {
+        //     // const linkLocator = jobLocator?.locator(linkSelector);
+        //     //
+        //     // await linkLocator.scrollIntoViewIfNeeded();
+        //     // const link = document
+        //     //   .querySelectorAll(jobsSelector)
+        //     //   ?.[jobIndex]?.querySelector(linkSelector) as HTMLElement;
+        //     // link.scrollIntoView();
+        //     // link.click();
+        //     // try {
+        //     //   const data = await jobDataExtractor.extractJobCardData();
+        //     //
+        //     //   console.log(data);
+        //     // } catch (e) {
+        //     //   console.log("ERROR", e);
+        //     // }
+        //   },
+        //   {
+        //     jobsSelector: SELECTORS.jobs,
+        //     linkSelector: SELECTORS.jobLink,
+        //     jobIndex,
+        //   },
+        // );
 
         jobIndex++;
         processedJobs++;
-
-        if (
-          processedJobs < limit &&
-          jobIndex === totalJobs &&
-          totalJobs < 25 // pagination size
-        ) {
-          const loadJobsResult = await this._loadJobs();
-
-          if (!!loadJobsResult) {
-            totalJobs = loadJobsResult;
-          }
-        }
-
-        if (jobIndex === totalJobs) {
-          break;
-        }
       }
 
       if (processedJobs === limit) {
@@ -172,10 +190,7 @@ class LinkedInScraper {
         break;
       }
 
-      if (!(await this._paginate()).success) {
-        await this._takeScreenshot("🔴 Failed to paginate jobs");
-        break;
-      }
+      await this._paginate();
     }
   }
 
