@@ -1,6 +1,6 @@
 import { chromium, Page } from "playwright";
 import { browserDefaults, LI_URLS, SELECTORS } from "./constants";
-import { sleep } from "./utils";
+import { retry, sleep } from "./utils";
 
 class LinkedInScraper {
   private _page: Page | null = null;
@@ -16,7 +16,38 @@ class LinkedInScraper {
   }
 
   private async _isLoggedIn() {
-    return this._page?.locator(SELECTORS.activeMenu).first().isVisible();
+    return !!(await this._page
+      ?.locator(SELECTORS.activeMenu)
+      .first()
+      .isVisible());
+  }
+
+  private async _paginate(paginationSize = 25, timeout = 2000) {
+    return retry(
+      async () => {
+        if (!this._page) {
+          throw new Error("🔴 Failed to load page");
+        }
+
+        const url = new URL(this._page.url());
+        const offset = parseInt(url.searchParams.get("start") || "0", 10);
+        url.searchParams.set("start", `${offset + paginationSize}`);
+
+        await this._page.goto(url.toString(), { waitUntil: "load" });
+
+        const loaded = await this._loadJobs();
+
+        return { success: !!loaded };
+      },
+      {
+        maxAttempts: 3,
+        delayMs: 200,
+        timeout,
+        onRetry: (error, attempt) => {
+          console.log(`Pagination attempt ${attempt} failed: ${error}`);
+        },
+      },
+    );
   }
 
   async initialize(liAtCookie: string) {
@@ -50,6 +81,13 @@ class LinkedInScraper {
 
     console.log("🟢 Successfully authenticated!");
     await this._takeScreenshot("Home page");
+  }
+
+  private async _loadJobs() {
+    return this._page?.evaluate(
+      (s) => document.querySelectorAll(s).length,
+      SELECTORS.jobs,
+    );
   }
 
   async searchJobs(keywords: string, location: string, limit = 25) {
@@ -100,6 +138,16 @@ class LinkedInScraper {
 
       jobIndex++;
     }
+    //
+    // await this._paginate();
+    // await sleep(2000);
+    // await this._paginate();
+    // // await sleep(2000);
+    // // await this._paginate();
+    //
+    // // if (!paginationResult.success) {
+    // //   break;
+    // // }
   }
 
   async close() {
