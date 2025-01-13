@@ -1,6 +1,7 @@
 import { chromium, Page } from "playwright";
 import { browserDefaults, LI_URLS, SELECTORS } from "./constants";
-import { retry, sleep } from "./utils";
+import { retry } from "./utils";
+import { JobDataExtractor } from "./job-data-extractor";
 
 class LinkedInScraper {
   private _page: Page | null = null;
@@ -132,8 +133,9 @@ class LinkedInScraper {
 
     await this._takeScreenshot("Search jobs page");
 
-    const jobs: any[] = [];
     let processedJobs = 0;
+
+    const jobDataExtractor = new JobDataExtractor();
 
     while (processedJobs < limit) {
       const { totalJobs, success: jobsSuccess } = await this._loadJobs();
@@ -141,52 +143,15 @@ class LinkedInScraper {
 
       if (!jobsSuccess) {
         await this._takeScreenshot("🔴 No jobs found");
-        return jobs;
+        return [];
       }
 
-      let jobIndex = 0;
+      const res = await jobDataExtractor.extractJobCardsData(this._page);
+      processedJobs += res.length;
+      console.log(res);
 
-      while (jobIndex < totalJobs && processedJobs < limit) {
-        console.log(
-          "loop",
-          "jobIndex",
-          jobIndex,
-          "processedJobs",
-          processedJobs,
-        );
-        // await sleep(500);
-
-        // await this._page?.evaluate(
-        //   async ({ jobsSelector, linkSelector, jobIndex }) => {
-        //     // const linkLocator = jobLocator?.locator(linkSelector);
-        //     //
-        //     // await linkLocator.scrollIntoViewIfNeeded();
-        //     // const link = document
-        //     //   .querySelectorAll(jobsSelector)
-        //     //   ?.[jobIndex]?.querySelector(linkSelector) as HTMLElement;
-        //     // link.scrollIntoView();
-        //     // link.click();
-        //     // try {
-        //     //   const data = await jobDataExtractor.extractJobCardData();
-        //     //
-        //     //   console.log(data);
-        //     // } catch (e) {
-        //     //   console.log("ERROR", e);
-        //     // }
-        //   },
-        //   {
-        //     jobsSelector: SELECTORS.jobs,
-        //     linkSelector: SELECTORS.jobLink,
-        //     jobIndex,
-        //   },
-        // );
-
-        jobIndex++;
-        processedJobs++;
-      }
-
-      if (processedJobs === limit) {
-        console.log("🟢 Job limit reached");
+      if (processedJobs >= limit) {
+        await this._takeScreenshot("🟢 Job limit reached");
         break;
       }
 

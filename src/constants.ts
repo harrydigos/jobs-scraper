@@ -30,4 +30,11 @@ export const SELECTORS = {
   container: ".jobs-search-results-list",
   jobs: "div.job-card-container",
   jobLink: "a.job-card-container__link",
+  title: ".artdeco-entity-lockup__title",
+  company: ".artdeco-entity-lockup__subtitle",
+  companyLink:
+    ".job-details-jobs-unified-top-card__primary-description-container a",
+  place: ".artdeco-entity-lockup__caption",
+  date: "time",
 } as const;
+// job-card-container__metadata-wrapper
