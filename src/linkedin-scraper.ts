@@ -1,7 +1,7 @@
 import { chromium, Page } from "playwright";
 import { browserDefaults, LI_URLS, SELECTORS } from "./constants";
 import { retry } from "./utils";
-import { JobDataExtractor } from "./job-data-extractor";
+import { jobDataExtractor } from "./job-data-extractor";
 
 class LinkedInScraper {
   private _page: Page | null = null;
@@ -135,8 +135,6 @@ class LinkedInScraper {
 
     let processedJobs = 0;
 
-    const jobDataExtractor = new JobDataExtractor();
-
     while (processedJobs < limit) {
       const { totalJobs, success: jobsSuccess } = await this._loadJobs();
       console.log({ totalJobs });
@@ -157,6 +155,7 @@ class LinkedInScraper {
 
       await this._paginate();
     }
+    console.log(jobDataExtractor.cachedJobs.values());
   }
 
   async close() {

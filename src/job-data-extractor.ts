@@ -1,10 +1,16 @@
 import { Page } from "playwright";
 import { SELECTORS } from "./constants";
 
+let instance: InstanceType<typeof JobDataExtractor>;
+
 class JobDataExtractor {
   cachedJobs: Map<string, unknown>;
 
   constructor() {
+    if (instance) {
+      throw new Error("You can create only one JobDataExtractor instance");
+    }
+    instance = this;
     this.cachedJobs = new Map();
   }
 
@@ -16,13 +22,15 @@ class JobDataExtractor {
       .trim();
   }
 
-  /** Extracts all raw job cards */
+  /**
+   * Extracts all available job cards from the provided page.
+   */
   async extractJobCardsData(page: Page) {
-    const rawData = await page.evaluate(
+    const rawJobs = await page.evaluate(
       ({ selectors }) => {
         return Array.from(document.querySelectorAll(selectors.jobs)).map(
           (job) => {
-            const jobId = job.getAttribute("data-job-id") || "";
+            const id = job.getAttribute("data-job-id") || "";
             const title = job.querySelector(selectors.title)?.textContent || "";
             const company =
               job.querySelector(selectors.company)?.textContent || "";
@@ -36,7 +44,7 @@ class JobDataExtractor {
             );
 
             return {
-              jobId,
+              id,
               title,
               company,
               companyImgLink,
@@ -50,13 +58,17 @@ class JobDataExtractor {
       { selectors: SELECTORS },
     );
 
-    return rawData.map((job) => ({
+    const sanitizedJobs = rawJobs.map((job) => ({
       ...job,
       title: this._sanitizeText(job.title),
       company: this._sanitizeText(job.company),
       place: this._sanitizeText(job.place),
     }));
+
+    sanitizedJobs.forEach((j) => this.cachedJobs.set(j.id, j));
+
+    return sanitizedJobs;
   }
 }
 
-export { JobDataExtractor };
+export const jobDataExtractor = Object.freeze(new JobDataExtractor());
