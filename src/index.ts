@@ -4,7 +4,7 @@ async function main() {
   const scraper = new LinkedInScraper();
 
   try {
-    await scraper.initialize(process.env.LI_AT_COOKIE!);
+    await scraper.initialize({ liAtCookie: process.env.LI_AT_COOKIE! });
 
     await scraper.searchJobs("software engineer", "greece", 5);
   } catch (error) {
