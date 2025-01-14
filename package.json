@@ -5,7 +5,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "clean": "rimraf .dist/*",
-    "build": "pnpm run clean && npx tsc ./src/index.ts --outDir .dist/",
+    "build": "pnpm run clean && tsc",
     "start": "pnpm run build && node --env-file=.env .dist/index.js"
   },
   "keywords": [],
