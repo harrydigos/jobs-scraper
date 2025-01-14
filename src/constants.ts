@@ -36,5 +36,11 @@ export const SELECTORS = {
     ".job-details-jobs-unified-top-card__primary-description-container a",
   place: ".artdeco-entity-lockup__caption",
   date: "time",
+  jobCardSkeletons: [
+    ".scaffold-skeleton",
+    ".scaffold-skeleton-container",
+    ".scaffold-skeleton-entity",
+    ".job-card-container__ghost-placeholder",
+  ],
 } as const;
 // job-card-container__metadata-wrapper

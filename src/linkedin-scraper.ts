@@ -79,12 +79,7 @@ class LinkedInScraper {
 
         // Wait for all the skeletons to be removed before starting to scroll
         await Promise.allSettled(
-          [
-            ".scaffold-skeleton",
-            ".scaffold-skeleton-container",
-            ".scaffold-skeleton-entity",
-            ".job-card-container__ghost-placeholder",
-          ].map((selector) =>
+          SELECTORS.jobCardSkeletons.map((selector) =>
             this._page?.waitForSelector(selector, {
               timeout: 3000,
               state: "detached",
@@ -92,27 +87,26 @@ class LinkedInScraper {
           ),
         );
 
-        let count = await this._page.locator(SELECTORS.jobs).count();
-        let lastItemLocator = this._page.locator(SELECTORS.jobs).last();
+        const getCount = () => this._page!.locator(SELECTORS.jobs).count();
+        const getLastLocator = () => this._page!.locator(SELECTORS.jobs).last();
+
+        let count = await getCount();
+        let lastItemLocator = getLastLocator();
 
         // Keep scrolling to the last item into view until no more items are loaded
         while (true) {
           await lastItemLocator.scrollIntoViewIfNeeded();
           await this._page.waitForTimeout(200);
-          const currentCount = await this._page.locator(SELECTORS.jobs).count();
 
-          console.log({ count });
+          const currentCount = await getCount();
+
           if (currentCount === count) {
             break; // No new items loaded, exit
           }
 
           count = currentCount;
-          lastItemLocator = this._page.locator(SELECTORS.jobs).last();
+          lastItemLocator = getLastLocator();
         }
-
-        // await lastItemLocator
-        //   .locator(SELECTORS.jobLink)
-        //   .scrollIntoViewIfNeeded();
 
         return { success: true as boolean, totalJobs: count };
       },
