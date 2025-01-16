@@ -111,15 +111,15 @@ class LinkedInScraper {
           ),
         );
 
-        const getCount = () => this.#page!.locator(SELECTORS.jobs).count();
-        const getLastLocator = () => this.#page!.locator(SELECTORS.jobs).last();
+        const getCount = () => this.#page?.locator(SELECTORS.jobs).count();
+        const getLastLocator = () => this.#page?.locator(SELECTORS.jobs).last();
 
         let count = await getCount();
         let lastItemLocator = getLastLocator();
 
         // Keep scrolling to the last item into view until no more items are loaded
         while (true) {
-          await lastItemLocator.scrollIntoViewIfNeeded();
+          await lastItemLocator?.scrollIntoViewIfNeeded();
           await this.#page.waitForTimeout(200);
 
           const currentCount = await getCount();
