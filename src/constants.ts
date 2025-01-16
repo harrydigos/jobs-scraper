@@ -42,5 +42,7 @@ export const SELECTORS = {
     ".scaffold-skeleton-entity",
     ".job-card-container__ghost-placeholder",
   ],
+  cookieAcceptBtn: 'button.artdeco-global-alert-action[action-type="ACCEPT"]',
+  chatPanel: ".msg-overlay-list-bubble",
 } as const;
 // job-card-container__metadata-wrapper

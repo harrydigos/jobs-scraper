@@ -17,10 +17,7 @@ class LinkedInScraper {
   }
 
   async #isLoggedIn() {
-    return !!(await this.#page
-      ?.locator(SELECTORS.activeMenu)
-      .first()
-      .isVisible());
+    return await this.#page?.locator(SELECTORS.activeMenu).first().isVisible();
   }
 
   async #paginate(paginationSize = 25) {
@@ -35,6 +32,33 @@ class LinkedInScraper {
     await this.#page.goto(url.toString(), {
       waitUntil: "load",
     });
+  }
+
+  async #hideChat() {
+    try {
+      await this.#page?.evaluate((s) => {
+        const chatPanel = document.querySelector<HTMLElement>(s);
+        if (chatPanel) {
+          chatPanel.style.display = "none";
+        }
+      }, SELECTORS.chatPanel);
+    } catch (e) {
+      console.error("🔴 Failed to hide chat:", e);
+    }
+  }
+
+  async #acceptCookies() {
+    try {
+      const isAcceptButtonVisible = await this.#page?.isVisible(
+        SELECTORS.cookieAcceptBtn,
+      );
+      if (isAcceptButtonVisible) {
+        await this.#page?.click(SELECTORS.cookieAcceptBtn);
+        return true;
+      }
+    } catch (e) {
+      console.error("🔴 Failed to accept cookies:", e);
+    }
   }
 
   async initialize({ liAtCookie }: { liAtCookie: string }) {
@@ -124,6 +148,8 @@ class LinkedInScraper {
     const searchUrl = `${LI_URLS.jobsSearch}?keywords=${encodeURIComponent(keywords)}&location=${encodeURIComponent(location)}`;
 
     await this.#page.goto(searchUrl, { waitUntil: "load" });
+
+    await Promise.allSettled([this.#hideChat(), this.#acceptCookies()]);
 
     await this.#takeScreenshot("Search jobs page");
 
