@@ -1,7 +1,27 @@
 import { chromium, Page } from "playwright";
 import { browserDefaults, LI_URLS, SELECTORS } from "./constants";
 import { retry } from "./utils";
-import { jobDataExtractor } from "./job-data-extractor";
+
+type Job = {
+  id: string;
+  title: string;
+  link: string;
+  description?: string;
+  company: string;
+  companyImgLink: string;
+  place: string;
+  date: string;
+  isPromoted: boolean;
+};
+
+function sanitizeText(rawText: string | null | undefined) {
+  return (
+    rawText
+      ?.replace(/[\r\n\t]+/g, " ")
+      .replace(/\s\s+/g, " ")
+      .trim() ?? ""
+  );
+}
 
 class LinkedInScraper {
   #page: Page | null = null;
@@ -94,22 +114,23 @@ class LinkedInScraper {
     await this.#takeScreenshot("Home page");
   }
 
+  async #waitForSkeletonsToBeRemoved() {
+    await Promise.allSettled(
+      SELECTORS.jobCardSkeletons.map((selector) =>
+        this.#page?.waitForSelector(selector, {
+          timeout: 3000,
+          state: "detached",
+        }),
+      ),
+    );
+  }
+
   async #loadJobs() {
     return retry(
       async () => {
-        if (!this.#page) {
-          throw new Error("🔴 Failed to load page");
-        }
+        if (!this.#page) throw new Error("🔴 Failed to load page");
 
-        // Wait for all the skeletons to be removed before starting to scroll
-        await Promise.allSettled(
-          SELECTORS.jobCardSkeletons.map((selector) =>
-            this.#page?.waitForSelector(selector, {
-              timeout: 3000,
-              state: "detached",
-            }),
-          ),
-        );
+        await this.#waitForSkeletonsToBeRemoved();
 
         const getCount = () => this.#page?.locator(SELECTORS.jobs).count();
         const getLastLocator = () => this.#page?.locator(SELECTORS.jobs).last();
@@ -120,7 +141,7 @@ class LinkedInScraper {
         // Keep scrolling to the last item into view until no more items are loaded
         while (true) {
           await lastItemLocator?.scrollIntoViewIfNeeded();
-          await this.#page.waitForTimeout(200);
+          await this.#waitForSkeletonsToBeRemoved();
 
           const currentCount = await getCount();
 
@@ -154,9 +175,11 @@ class LinkedInScraper {
     await this.#takeScreenshot("Search jobs page");
 
     let processedJobs = 0;
+    const jobs: Job[] = [];
 
     while (processedJobs < limit) {
       const { totalJobs, success: jobsSuccess } = await this.#loadJobs();
+
       console.log({ totalJobs });
 
       if (!jobsSuccess) {
@@ -164,8 +187,9 @@ class LinkedInScraper {
         return [];
       }
 
-      const res = await jobDataExtractor.extractJobCardsData(this.#page);
+      const res = await this.extractJobCardsData();
       processedJobs += res.length;
+      jobs.push(...res); // FIX: will exceed limit
 
       if (processedJobs >= limit) {
         await this.#takeScreenshot("🟢 Job limit reached");
@@ -174,6 +198,79 @@ class LinkedInScraper {
 
       await this.#paginate();
     }
+  }
+  async #loadJobDetails(jobId: string) {
+    return retry(
+      async () => {
+        if (!this.#page) throw new Error("🔴 Failed to load page");
+
+        await this.#waitForSkeletonsToBeRemoved();
+
+        const detailsPanel = this.#page.locator(SELECTORS.detailsPanel);
+
+        const [isVisible, content] = await Promise.all([
+          detailsPanel.isVisible(),
+          detailsPanel.innerHTML(),
+        ]);
+        const isSuccess = isVisible && content.includes(jobId);
+
+        if (!isSuccess) throw new Error("🔴 Failed to load job details");
+
+        return {
+          success: isSuccess,
+        };
+      },
+      {
+        maxAttempts: 3,
+        delayMs: 200,
+        timeout: 2000,
+        onRetry: (err) => console.error(err),
+      },
+    );
+  }
+
+  /**
+   * Extracts all available job cards from the provided page.
+   */
+  async extractJobCardsData() {
+    const rawJobCards =
+      (await this.#page?.evaluate(
+        ({ selectors }) => {
+          return Array.from(document.querySelectorAll(selectors.jobs)).map(
+            (job) => ({
+              id: job.getAttribute("data-job-id") ?? "",
+              title: job.querySelector(selectors.jobTitle)?.textContent ?? "",
+              link:
+                job.querySelector<HTMLAnchorElement>(selectors.jobLink)?.href ??
+                "",
+              company: job.querySelector(selectors.company)?.textContent ?? "",
+              companyImgLink:
+                job.querySelector("img")?.getAttribute("src") ?? "",
+              place: job.querySelector(selectors.place)?.textContent ?? "",
+              date:
+                job.querySelector(selectors.date)?.getAttribute("datetime") ??
+                "",
+              isPromoted: Array.from(job.querySelectorAll("li")).some(
+                (item) => item.textContent?.trim() === "Promoted",
+              ),
+            }),
+          );
+        },
+        { selectors: SELECTORS },
+      )) || [];
+
+    for (const job of rawJobCards) {
+      await this.#page?.locator(`div[data-job-id="${job.id}"]`).click();
+      await this.#loadJobDetails(job.id);
+      await this.#page?.waitForTimeout(100); // to handle rate limiting. maybe remove/reduce
+    }
+
+    return rawJobCards.map((job) => ({
+      ...job,
+      title: sanitizeText(job.title),
+      company: sanitizeText(job.company),
+      place: sanitizeText(job.place),
+    })) as Job[];
   }
 
   async close() {

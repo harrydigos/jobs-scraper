@@ -4,6 +4,7 @@ export const LI_URLS = {
   home: "https://www.linkedin.com",
   jobs: "https://www.linkedin.com/jobs",
   jobsSearch: "https://www.linkedin.com/jobs/search",
+  jobView: "https://www.linkedin.com/jobs/view",
 } as const;
 
 export const browserDefaults = {
@@ -30,7 +31,8 @@ export const SELECTORS = {
   container: ".jobs-search-results-list",
   jobs: "div.job-card-container",
   jobLink: "a.job-card-container__link",
-  title: ".artdeco-entity-lockup__title",
+  jobTitle: ".artdeco-entity-lockup__title",
+  jobDescription: ".jobs-description",
   company: ".artdeco-entity-lockup__subtitle",
   companyLink:
     ".job-details-jobs-unified-top-card__primary-description-container a",
@@ -44,5 +46,6 @@ export const SELECTORS = {
   ],
   cookieAcceptBtn: 'button.artdeco-global-alert-action[action-type="ACCEPT"]',
   chatPanel: ".msg-overlay-list-bubble",
+  detailsPanel: ".jobs-search__job-details--container",
 } as const;
 // job-card-container__metadata-wrapper
