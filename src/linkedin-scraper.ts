@@ -12,6 +12,11 @@ type Job = {
   place: string;
   date: string;
   isPromoted: boolean;
+  companyLink: string;
+  jobInsights: Array<string>;
+  timeSincePosted: string;
+  isReposted: boolean;
+  skillsRequired: Array<string>;
 };
 
 function sanitizeText(rawText: string | null | undefined) {
@@ -19,8 +24,12 @@ function sanitizeText(rawText: string | null | undefined) {
     rawText
       ?.replace(/[\r\n\t]+/g, " ")
       .replace(/\s\s+/g, " ")
-      .trim() ?? ""
+      .trim() || ""
   );
+}
+
+function getRandomArbitrary(min: number, max: number) {
+  return Math.random() * (max - min) + min;
 }
 
 class LinkedInScraper {
@@ -178,18 +187,16 @@ class LinkedInScraper {
     const jobs: Job[] = [];
 
     while (processedJobs < limit) {
-      const { totalJobs, success: jobsSuccess } = await this.#loadJobs();
-
-      console.log({ totalJobs });
+      const { success: jobsSuccess } = await this.#loadJobs();
 
       if (!jobsSuccess) {
         await this.#takeScreenshot("🔴 No jobs found");
         return [];
       }
 
-      const res = await this.extractJobCardsData();
-      processedJobs += res.length;
-      jobs.push(...res); // FIX: will exceed limit
+      const extractedJobs = await this.extractJobsData(limit - processedJobs);
+      processedJobs += extractedJobs.length;
+      jobs.push(...extractedJobs);
 
       if (processedJobs >= limit) {
         await this.#takeScreenshot("🟢 Job limit reached");
@@ -198,7 +205,10 @@ class LinkedInScraper {
 
       await this.#paginate();
     }
+
+    console.log(jobs, { length: jobs.length });
   }
+
   async #loadJobDetails(jobId: string) {
     return retry(
       async () => {
@@ -232,45 +242,82 @@ class LinkedInScraper {
   /**
    * Extracts all available job cards from the provided page.
    */
-  async extractJobCardsData() {
-    const rawJobCards =
-      (await this.#page?.evaluate(
-        ({ selectors }) => {
-          return Array.from(document.querySelectorAll(selectors.jobs)).map(
-            (job) => ({
-              id: job.getAttribute("data-job-id") ?? "",
-              title: job.querySelector(selectors.jobTitle)?.textContent ?? "",
-              link:
-                job.querySelector<HTMLAnchorElement>(selectors.jobLink)?.href ??
-                "",
-              company: job.querySelector(selectors.company)?.textContent ?? "",
-              companyImgLink:
-                job.querySelector("img")?.getAttribute("src") ?? "",
-              place: job.querySelector(selectors.place)?.textContent ?? "",
-              date:
-                job.querySelector(selectors.date)?.getAttribute("datetime") ??
-                "",
-              isPromoted: Array.from(job.querySelectorAll("li")).some(
-                (item) => item.textContent?.trim() === "Promoted",
-              ),
-            }),
-          );
-        },
-        { selectors: SELECTORS },
-      )) || [];
-
-    for (const job of rawJobCards) {
-      await this.#page?.locator(`div[data-job-id="${job.id}"]`).click();
-      await this.#loadJobDetails(job.id);
-      await this.#page?.waitForTimeout(100); // to handle rate limiting. maybe remove/reduce
+  async extractJobsData(limit: number) {
+    if (!this.#page) {
+      throw new Error("🔴 Failed to load page");
     }
 
-    return rawJobCards.map((job) => ({
-      ...job,
-      title: sanitizeText(job.title),
-      company: sanitizeText(job.company),
-      place: sanitizeText(job.place),
-    })) as Job[];
+    const _jobs = await this.#page.evaluate(
+      ({ selectors, limit }) => {
+        const jobElements = document.querySelectorAll(selectors.jobs);
+        return Array.from(jobElements)
+          .slice(0, Math.min(limit, 25))
+          .map((job) => ({
+            id: job.getAttribute("data-job-id") || "",
+            title: job.querySelector(selectors.jobTitle)?.textContent || "",
+            link:
+              job.querySelector<HTMLAnchorElement>(selectors.jobLink)?.href ||
+              "",
+            company: job.querySelector(selectors.company)?.textContent || "",
+            companyImgLink: job.querySelector("img")?.getAttribute("src") || "",
+            place: job.querySelector(selectors.place)?.textContent || "",
+            date:
+              job.querySelector(selectors.date)?.getAttribute("datetime") || "",
+            isPromoted: Array.from(job.querySelectorAll("li")).some(
+              (item) => item.textContent?.trim() === "Promoted",
+            ),
+          }));
+      },
+      { selectors: SELECTORS, limit },
+    );
+    const jobs: Set<Job> = new Set(_jobs as Job[]);
+
+    for (const job of jobs) {
+      await this.#page.locator(`div[data-job-id="${job.id}"]`).click();
+      await this.#loadJobDetails(job.id);
+
+      const timeSincePosted = await this.#page.evaluate(
+        (selector) => document.querySelector(selector)?.textContent || "",
+        SELECTORS.timeSincePosted,
+      );
+
+      const companyLink = await this.#page.evaluate(
+        (selector) =>
+          document.querySelector(selector)?.getAttribute("href") || "",
+        SELECTORS.companyLink,
+      );
+
+      const skillsRequired = await this.#page.evaluate((jobSkillsSelector) => {
+        return Array.from(document.querySelectorAll(jobSkillsSelector))
+          ?.flatMap((e) => e.textContent!.split(/,|and/))
+          .map((e) => e.replace(/[\n\r\t ]+/g, " ").trim())
+          .filter((e) => e.length);
+      }, SELECTORS.skillsRequired);
+
+      const jobInsights = await this.#page.evaluate(
+        (jobInsightsSelector) =>
+          Array.from(document.querySelectorAll(jobInsightsSelector))
+            .map((e) => e.textContent || " ")
+            .filter(Boolean),
+        SELECTORS.insights,
+      );
+
+      jobs.add({
+        ...job,
+        title: sanitizeText(job.title),
+        company: sanitizeText(job.company),
+        place: sanitizeText(job.place),
+        companyLink,
+        jobInsights: jobInsights.map((j) => sanitizeText(j)),
+        timeSincePosted,
+        isReposted: timeSincePosted.includes("Reposted"),
+        skillsRequired,
+      });
+
+      await this.#page?.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
+    }
+
+    return [...jobs];
   }
 
   async close() {

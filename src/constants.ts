@@ -34,8 +34,7 @@ export const SELECTORS = {
   jobTitle: ".artdeco-entity-lockup__title",
   jobDescription: ".jobs-description",
   company: ".artdeco-entity-lockup__subtitle",
-  companyLink:
-    ".job-details-jobs-unified-top-card__primary-description-container a",
+  companyLink: ".job-details-jobs-unified-top-card__company-name a",
   place: ".artdeco-entity-lockup__caption",
   date: "time",
   jobCardSkeletons: [
@@ -47,5 +46,11 @@ export const SELECTORS = {
   cookieAcceptBtn: 'button.artdeco-global-alert-action[action-type="ACCEPT"]',
   chatPanel: ".msg-overlay-list-bubble",
   detailsPanel: ".jobs-search__job-details--container",
+  timeSincePosted:
+    ".job-details-jobs-unified-top-card__primary-description-container span:nth-of-type(3)",
+
+  // job-card-container__metadata-wrapper
+  // applyBtn: 'button.jobs-apply-button[role="link"]',
+  insights: ".job-details-jobs-unified-top-card__container--two-pane li",
+  skillsRequired: ".job-details-how-you-match__skills-item-subtitle",
 } as const;
-// job-card-container__metadata-wrapper
