@@ -207,6 +207,8 @@ class LinkedInScraper {
     }
 
     console.log(jobs, { length: jobs.length });
+
+    return jobs;
   }
 
   async #loadJobDetails(jobId: string) {
@@ -274,6 +276,12 @@ class LinkedInScraper {
       await this.#page.locator(`div[data-job-id="${job.id}"]`).click();
       await this.#loadJobDetails(job.id);
 
+      const description = await this.#page.evaluate((selector) => {
+        return Array.from(
+          document.querySelector(selector)?.querySelectorAll("p, li") || [],
+        ).map((el) => el.textContent?.trim() || "");
+      }, SELECTORS.jobDescription);
+
       const timeSincePosted = await this.#page.evaluate(
         (selector) => document.querySelector(selector)?.textContent || "",
         SELECTORS.timeSincePosted,
@@ -316,6 +324,7 @@ class LinkedInScraper {
         ...job,
         title: sanitizeText(job.title),
         companyLink,
+        description: description.map((t) => sanitizeText(t)).join("\n"),
         jobInsights: jobInsights.map((j) => sanitizeText(j)),
         timeSincePosted,
         isReposted: timeSincePosted.includes("Reposted"),
