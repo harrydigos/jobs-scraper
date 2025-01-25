@@ -53,4 +53,5 @@ export const SELECTORS = {
   skillsRequired: ".job-details-how-you-match__skills-item-subtitle",
   requirements:
     ".job-details-how-you-match-card__qualification-section-list-item",
+  applyButton: "button.jobs-apply-button[role='link']",
 } as const;

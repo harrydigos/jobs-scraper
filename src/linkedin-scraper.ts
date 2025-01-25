@@ -18,6 +18,7 @@ type Job = {
   isReposted: boolean;
   skillsRequired: Array<string>;
   requirements: Array<string>;
+  applyLink: string;
 };
 
 function sanitizeText(rawText: string | null | undefined) {
@@ -319,6 +320,24 @@ class LinkedInScraper {
         SELECTORS.requirements,
       );
 
+      // Extract external apply link
+      const applyButton = this.#page.locator(SELECTORS.applyButton).first();
+      let applyLink = "";
+      if ((await applyButton.count()) > 0) {
+        await applyButton.click();
+        await this.#page.context().waitForEvent("page");
+
+        const newPage = this.#page.context().pages().at(-1);
+        if (newPage && newPage !== this.#page) {
+          applyLink = newPage.url();
+          const url = new URL(newPage.url());
+          url.search = "";
+          applyLink = url.toString();
+          console.log({ applyLink });
+          await newPage.close();
+        }
+      }
+
       const parseJobLocation = () => {
         const match = sanitizeText(job.company).match(
           /^(.*?)\s·\s(.*?)\s\((.*?)\)$/,
@@ -341,6 +360,7 @@ class LinkedInScraper {
         isReposted: timeSincePosted.includes("Reposted"),
         skillsRequired,
         requirements,
+        applyLink,
         ...parseJobLocation(),
       });
 
