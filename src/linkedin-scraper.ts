@@ -247,7 +247,9 @@ class LinkedInScraper {
       throw new Error("🔴 Failed to load page");
     }
 
-    const _jobs = await this.#page.evaluate(
+    const updatedJobs = new Map<string, Job>();
+
+    const jobs = await this.#page.evaluate(
       ({ selectors, limit }) => {
         const jobElements = document.querySelectorAll(selectors.jobs);
         return Array.from(jobElements)
@@ -266,11 +268,10 @@ class LinkedInScraper {
             isPromoted: Array.from(job.querySelectorAll("li")).some(
               (item) => item.textContent?.trim() === "Promoted",
             ),
-          }));
+          })) as Job[];
       },
       { selectors: SELECTORS, limit },
     );
-    const jobs: Set<Job> = new Set(_jobs as Job[]);
 
     for (const job of jobs) {
       await this.#page.locator(`div[data-job-id="${job.id}"]`).click();
@@ -302,7 +303,7 @@ class LinkedInScraper {
         SELECTORS.insights,
       );
 
-      jobs.add({
+      updatedJobs.set(job.id, {
         ...job,
         title: sanitizeText(job.title),
         company: sanitizeText(job.company),
@@ -317,7 +318,7 @@ class LinkedInScraper {
       await this.#page?.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
     }
 
-    return [...jobs];
+    return Array.from(updatedJobs.values());
   }
 
   async close() {
