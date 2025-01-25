@@ -31,12 +31,10 @@ export const SELECTORS = {
   container: ".jobs-search-results-list",
   jobs: "div.job-card-container",
   jobLink: "a.job-card-container__link",
-  jobTitle: ".artdeco-entity-lockup__title",
+  jobTitle: ".artdeco-entity-lockup__title .visually-hidden",
   jobDescription: ".jobs-description",
   company: ".artdeco-entity-lockup__subtitle",
   companyLink: ".job-details-jobs-unified-top-card__company-name a",
-  place: ".artdeco-entity-lockup__caption",
-  date: "time",
   jobCardSkeletons: [
     ".scaffold-skeleton",
     ".scaffold-skeleton-container",

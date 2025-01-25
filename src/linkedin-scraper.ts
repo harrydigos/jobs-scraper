@@ -9,8 +9,8 @@ type Job = {
   description?: string;
   company: string;
   companyImgLink: string;
-  place: string;
-  date: string;
+  location: string;
+  workType: string;
   isPromoted: boolean;
   companyLink: string;
   jobInsights: Array<string>;
@@ -262,13 +262,10 @@ class LinkedInScraper {
               "",
             company: job.querySelector(selectors.company)?.textContent || "",
             companyImgLink: job.querySelector("img")?.getAttribute("src") || "",
-            place: job.querySelector(selectors.place)?.textContent || "",
-            date:
-              job.querySelector(selectors.date)?.getAttribute("datetime") || "",
             isPromoted: Array.from(job.querySelectorAll("li")).some(
               (item) => item.textContent?.trim() === "Promoted",
             ),
-          })) as Job[];
+          }));
       },
       { selectors: SELECTORS, limit },
     );
@@ -303,16 +300,27 @@ class LinkedInScraper {
         SELECTORS.insights,
       );
 
+      const parseJobLocation = () => {
+        const match = sanitizeText(job.company).match(
+          /^(.*?)\s·\s(.*?)\s\((.*?)\)$/,
+        );
+
+        return {
+          company: sanitizeText(match?.[1]),
+          location: sanitizeText(match?.[2]),
+          workType: sanitizeText(match?.[3]),
+        };
+      };
+
       updatedJobs.set(job.id, {
         ...job,
         title: sanitizeText(job.title),
-        company: sanitizeText(job.company),
-        place: sanitizeText(job.place),
         companyLink,
         jobInsights: jobInsights.map((j) => sanitizeText(j)),
         timeSincePosted,
         isReposted: timeSincePosted.includes("Reposted"),
         skillsRequired,
+        ...parseJobLocation(),
       });
 
       await this.#page?.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
