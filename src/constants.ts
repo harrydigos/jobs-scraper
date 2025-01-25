@@ -51,4 +51,6 @@ export const SELECTORS = {
   // applyBtn: 'button.jobs-apply-button[role="link"]',
   insights: ".job-details-jobs-unified-top-card__container--two-pane li",
   skillsRequired: ".job-details-how-you-match__skills-item-subtitle",
+  requirements:
+    ".job-details-how-you-match-card__qualification-section-list-item",
 } as const;

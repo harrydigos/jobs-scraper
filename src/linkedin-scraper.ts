@@ -17,6 +17,7 @@ type Job = {
   timeSincePosted: string;
   isReposted: boolean;
   skillsRequired: Array<string>;
+  requirements: Array<string>;
 };
 
 function sanitizeText(rawText: string | null | undefined) {
@@ -293,12 +294,14 @@ class LinkedInScraper {
         SELECTORS.companyLink,
       );
 
-      const skillsRequired = await this.#page.evaluate((jobSkillsSelector) => {
-        return Array.from(document.querySelectorAll(jobSkillsSelector))
-          ?.flatMap((e) => e.textContent!.split(/,|and/))
-          .map((e) => e.replace(/[\n\r\t ]+/g, " ").trim())
-          .filter((e) => e.length);
-      }, SELECTORS.skillsRequired);
+      const skillsRequired = await this.#page.evaluate(
+        (selector) =>
+          Array.from(document.querySelectorAll(selector))
+            .flatMap((el) => (el.textContent || "").split(", "))
+            .map((skill) => skill.replace(/and/g, "").trim())
+            .filter(Boolean),
+        SELECTORS.skillsRequired,
+      );
 
       const jobInsights = await this.#page.evaluate(
         (jobInsightsSelector) =>
@@ -306,6 +309,14 @@ class LinkedInScraper {
             .map((e) => e.textContent || " ")
             .filter(Boolean),
         SELECTORS.insights,
+      );
+
+      const requirements = await this.#page.evaluate(
+        (selector) =>
+          Array.from(document.querySelectorAll(selector))
+            .map((el) => (el.textContent || "").trim())
+            .filter(Boolean),
+        SELECTORS.requirements,
       );
 
       const parseJobLocation = () => {
@@ -329,6 +340,7 @@ class LinkedInScraper {
         timeSincePosted,
         isReposted: timeSincePosted.includes("Reposted"),
         skillsRequired,
+        requirements,
         ...parseJobLocation(),
       });
 
