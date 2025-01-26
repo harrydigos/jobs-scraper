@@ -1,27 +1,9 @@
 import { chromium, Page } from "playwright";
-import { browserDefaults, LI_URLS, SELECTORS } from "./constants";
-import { getRandomArbitrary, retry, sanitizeText } from "./utils";
+import { browserDefaults, LI_URLS, SELECTORS } from "../constants";
+import { getRandomArbitrary, retry, sanitizeText } from "../utils";
 import { JobDataExtractor } from "./job-data-extractor";
-import { createLogger } from "./logger";
-
-type Job = {
-  id: string;
-  title: string;
-  link: string;
-  description?: string;
-  company: string;
-  companyImgLink: string;
-  location: string;
-  workType: string;
-  isPromoted: boolean;
-  companyLink: string;
-  jobInsights: Array<string>;
-  timeSincePosted: string;
-  isReposted: boolean;
-  skillsRequired: Array<string>;
-  requirements: Array<string>;
-  applyLink: string;
-};
+import { createLogger } from "../utils/logger";
+import type { Job } from "../types";
 
 const logger = createLogger({
   level: "debug",

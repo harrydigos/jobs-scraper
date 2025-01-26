@@ -1,7 +1,7 @@
 import { Page } from "playwright";
-import { SELECTORS } from "./constants";
-import { sanitizeText } from "./utils";
-import { createLogger } from "./logger";
+import { sanitizeText } from "../utils";
+import { createLogger } from "../utils/logger";
+import { SELECTORS } from "../constants";
 
 const logger = createLogger({
   level: "debug",

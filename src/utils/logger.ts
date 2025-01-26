@@ -11,6 +11,7 @@ import { format } from "util";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 type Transport = "console" | "file";
+type LogMeta = Record<string, unknown> | Error | unknown | undefined;
 
 type LoggerConfig = {
   level?: LogLevel;
@@ -25,8 +26,6 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   warn: 2,
   error: 3,
 };
-
-type LogMeta = Record<string, unknown> | Error | unknown | undefined;
 
 const LOG_EMOJIS = {
   debug: "🐛",

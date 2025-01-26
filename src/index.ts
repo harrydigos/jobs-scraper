@@ -1,4 +1,4 @@
-import { LinkedInScraper } from "./linkedin-scraper";
+import { LinkedInScraper } from "./core/linkedin-scraper";
 
 async function main() {
   const scraper = new LinkedInScraper();
