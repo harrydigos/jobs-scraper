@@ -1,6 +1,7 @@
 import { chromium, Page } from "playwright";
 import { browserDefaults, LI_URLS, SELECTORS } from "./constants";
-import { retry } from "./utils";
+import { getRandomArbitrary, retry, sanitizeText } from "./utils";
+import { JobDataExtractor } from "./job-data-extractor";
 
 type Job = {
   id: string;
@@ -20,19 +21,6 @@ type Job = {
   requirements: Array<string>;
   applyLink: string;
 };
-
-function sanitizeText(rawText: string | null | undefined) {
-  return (
-    rawText
-      ?.replace(/[\r\n\t]+/g, " ")
-      .replace(/\s\s+/g, " ")
-      .trim() || ""
-  );
-}
-
-function getRandomArbitrary(min: number, max: number) {
-  return Math.random() * (max - min) + min;
-}
 
 class LinkedInScraper {
   #page: Page | null = null;
@@ -243,138 +231,51 @@ class LinkedInScraper {
     );
   }
 
-  /**
-   * Extracts all available job cards from the provided page.
-   */
   async extractJobsData(limit: number) {
-    if (!this.#page) {
-      throw new Error("🔴 Failed to load page");
-    }
+    if (!this.#page) throw new Error("🔴 Failed to load page");
 
-    const updatedJobs = new Map<string, Job>();
+    const jobs = new Map<string, Job>();
+    const extractor = new JobDataExtractor(this.#page);
 
-    const jobs = await this.#page.evaluate(
-      ({ selectors, limit }) => {
-        const jobElements = document.querySelectorAll(selectors.jobs);
-        return Array.from(jobElements)
-          .slice(0, Math.min(limit, 25))
-          .map((job) => ({
-            id: job.getAttribute("data-job-id") || "",
-            title: job.querySelector(selectors.jobTitle)?.textContent || "",
-            link:
-              job.querySelector<HTMLAnchorElement>(selectors.jobLink)?.href ||
-              "",
-            company: job.querySelector(selectors.company)?.textContent || "",
-            companyImgLink: job.querySelector("img")?.getAttribute("src") || "",
-            isPromoted: Array.from(job.querySelectorAll("li")).some(
-              (item) => item.textContent?.trim() === "Promoted",
-            ),
-          }));
-      },
-      { selectors: SELECTORS, limit },
-    );
-
-    for (const job of jobs) {
+    for (const job of await extractor.getJobCards(limit)) {
       try {
         await this.#page.locator(`div[data-job-id="${job.id}"]`).click();
         const loadedDetails = await this.#loadJobDetails(job.id);
 
         if (!loadedDetails.success) continue;
 
-        const description = await this.#page.evaluate((selector) => {
-          return Array.from(
-            document.querySelector(selector)?.querySelectorAll("p, li") || [],
-          ).map((el) => el.textContent?.trim() || "");
-        }, SELECTORS.jobDescription);
+        const {
+          description,
+          timeSincePosted,
+          companyLink,
+          skillsRequired,
+          requirements,
+          jobInsights,
+          applyLink,
+        } = await extractor.getJobDetails();
 
-        const timeSincePosted = await this.#page.evaluate(
-          (selector) => document.querySelector(selector)?.textContent || "",
-          SELECTORS.timeSincePosted,
-        );
-
-        const companyLink = await this.#page.evaluate(
-          (selector) =>
-            document.querySelector(selector)?.getAttribute("href") || "",
-          SELECTORS.companyLink,
-        );
-
-        const skillsRequired = await this.#page.evaluate(
-          (selector) =>
-            Array.from(document.querySelectorAll(selector))
-              .flatMap((el) => (el.textContent || "").split(", "))
-              .map((skill) => skill.replace(/and/g, "").trim())
-              .filter(Boolean),
-          SELECTORS.skillsRequired,
-        );
-
-        const jobInsights = await this.#page.evaluate(
-          (jobInsightsSelector) =>
-            Array.from(document.querySelectorAll(jobInsightsSelector))
-              .map((e) => e.textContent || " ")
-              .filter(Boolean),
-          SELECTORS.insights,
-        );
-
-        const requirements = await this.#page.evaluate(
-          (selector) =>
-            Array.from(document.querySelectorAll(selector))
-              .map((el) => (el.textContent || "").trim())
-              .filter(Boolean),
-          SELECTORS.requirements,
-        );
-
-        // Extract external apply link
-        const applyButton = this.#page.locator(SELECTORS.applyButton).first();
-        let applyLink = "";
-        if ((await applyButton.count()) > 0) {
-          await applyButton.click();
-          await this.#page.context().waitForEvent("page");
-
-          const newPage = this.#page.context().pages().at(-1);
-          if (newPage && newPage !== this.#page) {
-            applyLink = newPage.url();
-            const url = new URL(newPage.url());
-            url.search = "";
-            applyLink = url.toString();
-            console.log({ applyLink });
-            await newPage.close();
-          }
-        }
-
-        const parseJobLocation = () => {
-          const match = sanitizeText(job.company).match(
-            /^(.*?)\s·\s(.*?)\s\((.*?)\)$/,
-          );
-
-          return {
-            company: sanitizeText(match?.[1]),
-            location: sanitizeText(match?.[2]),
-            workType: sanitizeText(match?.[3]),
-          };
-        };
-
-        updatedJobs.set(job.id, {
+        jobs.set(job.id, {
           ...job,
+          ...extractor.parseJobLocation(job.company),
           title: sanitizeText(job.title),
           companyLink,
-          description: description.map((t) => sanitizeText(t)).join("\n"),
-          jobInsights: jobInsights.map((j) => sanitizeText(j)),
+          description: description.map(sanitizeText).join("\n"),
+          jobInsights: jobInsights.map(sanitizeText),
           timeSincePosted,
           isReposted: timeSincePosted.includes("Reposted"),
           skillsRequired,
           requirements,
           applyLink,
-          ...parseJobLocation(),
         });
 
-        await this.#page?.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
+        await this.#page.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
       } catch (e) {
         console.error(`Failed to process job ${job.id}:`, e);
         continue;
       }
     }
 
-    return Array.from(updatedJobs.values());
+    return Array.from(jobs.values());
   }
 
   async close() {
