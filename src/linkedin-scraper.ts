@@ -189,9 +189,9 @@ class LinkedInScraper {
     const jobs: Job[] = [];
 
     while (processedJobs < limit) {
-      const { success: jobsSuccess } = await this.#loadJobs();
+      const loadedJobs = await this.#loadJobs();
 
-      if (!jobsSuccess) {
+      if (!loadedJobs.success) {
         await this.#takeScreenshot("🔴 No jobs found");
         return [];
       }
@@ -275,96 +275,103 @@ class LinkedInScraper {
     );
 
     for (const job of jobs) {
-      await this.#page.locator(`div[data-job-id="${job.id}"]`).click();
-      await this.#loadJobDetails(job.id);
+      try {
+        await this.#page.locator(`div[data-job-id="${job.id}"]`).click();
+        const loadedDetails = await this.#loadJobDetails(job.id);
 
-      const description = await this.#page.evaluate((selector) => {
-        return Array.from(
-          document.querySelector(selector)?.querySelectorAll("p, li") || [],
-        ).map((el) => el.textContent?.trim() || "");
-      }, SELECTORS.jobDescription);
+        if (!loadedDetails.success) continue;
 
-      const timeSincePosted = await this.#page.evaluate(
-        (selector) => document.querySelector(selector)?.textContent || "",
-        SELECTORS.timeSincePosted,
-      );
+        const description = await this.#page.evaluate((selector) => {
+          return Array.from(
+            document.querySelector(selector)?.querySelectorAll("p, li") || [],
+          ).map((el) => el.textContent?.trim() || "");
+        }, SELECTORS.jobDescription);
 
-      const companyLink = await this.#page.evaluate(
-        (selector) =>
-          document.querySelector(selector)?.getAttribute("href") || "",
-        SELECTORS.companyLink,
-      );
-
-      const skillsRequired = await this.#page.evaluate(
-        (selector) =>
-          Array.from(document.querySelectorAll(selector))
-            .flatMap((el) => (el.textContent || "").split(", "))
-            .map((skill) => skill.replace(/and/g, "").trim())
-            .filter(Boolean),
-        SELECTORS.skillsRequired,
-      );
-
-      const jobInsights = await this.#page.evaluate(
-        (jobInsightsSelector) =>
-          Array.from(document.querySelectorAll(jobInsightsSelector))
-            .map((e) => e.textContent || " ")
-            .filter(Boolean),
-        SELECTORS.insights,
-      );
-
-      const requirements = await this.#page.evaluate(
-        (selector) =>
-          Array.from(document.querySelectorAll(selector))
-            .map((el) => (el.textContent || "").trim())
-            .filter(Boolean),
-        SELECTORS.requirements,
-      );
-
-      // Extract external apply link
-      const applyButton = this.#page.locator(SELECTORS.applyButton).first();
-      let applyLink = "";
-      if ((await applyButton.count()) > 0) {
-        await applyButton.click();
-        await this.#page.context().waitForEvent("page");
-
-        const newPage = this.#page.context().pages().at(-1);
-        if (newPage && newPage !== this.#page) {
-          applyLink = newPage.url();
-          const url = new URL(newPage.url());
-          url.search = "";
-          applyLink = url.toString();
-          console.log({ applyLink });
-          await newPage.close();
-        }
-      }
-
-      const parseJobLocation = () => {
-        const match = sanitizeText(job.company).match(
-          /^(.*?)\s·\s(.*?)\s\((.*?)\)$/,
+        const timeSincePosted = await this.#page.evaluate(
+          (selector) => document.querySelector(selector)?.textContent || "",
+          SELECTORS.timeSincePosted,
         );
 
-        return {
-          company: sanitizeText(match?.[1]),
-          location: sanitizeText(match?.[2]),
-          workType: sanitizeText(match?.[3]),
+        const companyLink = await this.#page.evaluate(
+          (selector) =>
+            document.querySelector(selector)?.getAttribute("href") || "",
+          SELECTORS.companyLink,
+        );
+
+        const skillsRequired = await this.#page.evaluate(
+          (selector) =>
+            Array.from(document.querySelectorAll(selector))
+              .flatMap((el) => (el.textContent || "").split(", "))
+              .map((skill) => skill.replace(/and/g, "").trim())
+              .filter(Boolean),
+          SELECTORS.skillsRequired,
+        );
+
+        const jobInsights = await this.#page.evaluate(
+          (jobInsightsSelector) =>
+            Array.from(document.querySelectorAll(jobInsightsSelector))
+              .map((e) => e.textContent || " ")
+              .filter(Boolean),
+          SELECTORS.insights,
+        );
+
+        const requirements = await this.#page.evaluate(
+          (selector) =>
+            Array.from(document.querySelectorAll(selector))
+              .map((el) => (el.textContent || "").trim())
+              .filter(Boolean),
+          SELECTORS.requirements,
+        );
+
+        // Extract external apply link
+        const applyButton = this.#page.locator(SELECTORS.applyButton).first();
+        let applyLink = "";
+        if ((await applyButton.count()) > 0) {
+          await applyButton.click();
+          await this.#page.context().waitForEvent("page");
+
+          const newPage = this.#page.context().pages().at(-1);
+          if (newPage && newPage !== this.#page) {
+            applyLink = newPage.url();
+            const url = new URL(newPage.url());
+            url.search = "";
+            applyLink = url.toString();
+            console.log({ applyLink });
+            await newPage.close();
+          }
+        }
+
+        const parseJobLocation = () => {
+          const match = sanitizeText(job.company).match(
+            /^(.*?)\s·\s(.*?)\s\((.*?)\)$/,
+          );
+
+          return {
+            company: sanitizeText(match?.[1]),
+            location: sanitizeText(match?.[2]),
+            workType: sanitizeText(match?.[3]),
+          };
         };
-      };
 
-      updatedJobs.set(job.id, {
-        ...job,
-        title: sanitizeText(job.title),
-        companyLink,
-        description: description.map((t) => sanitizeText(t)).join("\n"),
-        jobInsights: jobInsights.map((j) => sanitizeText(j)),
-        timeSincePosted,
-        isReposted: timeSincePosted.includes("Reposted"),
-        skillsRequired,
-        requirements,
-        applyLink,
-        ...parseJobLocation(),
-      });
+        updatedJobs.set(job.id, {
+          ...job,
+          title: sanitizeText(job.title),
+          companyLink,
+          description: description.map((t) => sanitizeText(t)).join("\n"),
+          jobInsights: jobInsights.map((j) => sanitizeText(j)),
+          timeSincePosted,
+          isReposted: timeSincePosted.includes("Reposted"),
+          skillsRequired,
+          requirements,
+          applyLink,
+          ...parseJobLocation(),
+        });
 
-      await this.#page?.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
+        await this.#page?.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
+      } catch (e) {
+        console.error(`Failed to process job ${job.id}:`, e);
+        continue;
+      }
     }
 
     return Array.from(updatedJobs.values());
