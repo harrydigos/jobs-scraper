@@ -28,13 +28,20 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 
 type LogMeta = Record<string, unknown> | Error | unknown | undefined;
 
+const LOG_EMOJIS = {
+  debug: "🐛",
+  info: "ℹ️",
+  warn: "⚠️",
+  error: "❌",
+} as const;
+
 class Logger {
   private static instance: Logger;
-  private config: Required<LoggerConfig>;
-  private logStream?: WriteStream;
+  #config: Required<LoggerConfig>;
+  #logStream?: WriteStream;
 
   private constructor(config: LoggerConfig) {
-    this.config = {
+    this.#config = {
       level: "info",
       transports: ["console"],
       maxFileSize: 1024 * 1024 * 5, // 5MB
@@ -42,7 +49,7 @@ class Logger {
       ...config,
     };
 
-    if (this.config.transports.includes("file") && !this.config.filePath) {
+    if (this.#config.transports.includes("file") && !this.#config.filePath) {
       throw new Error("File path required for file transport");
     }
 
@@ -51,15 +58,15 @@ class Logger {
   }
 
   #initializeFileTransport() {
-    if (!this.config.transports.includes("file") || !this.config.filePath) {
+    if (!this.#config.transports.includes("file") || !this.#config.filePath) {
       return;
     }
 
-    const dir = path.dirname(this.config.filePath);
+    const dir = path.dirname(this.#config.filePath);
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }
-    this.logStream = createWriteStream(this.config.filePath, {
+    this.#logStream = createWriteStream(this.#config.filePath, {
       flags: "a",
     });
   }
@@ -76,13 +83,13 @@ class Logger {
 
   /** Rotates log file if it exceeds max size */
   #rotateFileIfNeeded() {
-    if (this.config.filePath && this.config.maxFileSize) {
+    if (this.#config.filePath && this.#config.maxFileSize) {
       try {
-        const stats = statSync(this.config.filePath);
-        if (stats.size > this.config.maxFileSize) {
-          this.logStream?.end();
-          const rotatedPath = `${this.config.filePath}.${Date.now()}`;
-          renameSync(this.config.filePath, rotatedPath);
+        const stats = statSync(this.#config.filePath);
+        if (stats.size > this.#config.maxFileSize) {
+          this.#logStream?.end();
+          const rotatedPath = `${this.#config.filePath}.${Date.now()}`;
+          renameSync(this.#config.filePath, rotatedPath);
           this.#initializeFileTransport();
         }
       } catch (error) {
@@ -92,18 +99,18 @@ class Logger {
   }
 
   #writeToTransports(message: string) {
-    if (this.config.transports.includes("console")) {
+    if (this.#config.transports.includes("console")) {
       process.stdout.write(`${message}\n`);
     }
 
-    if (this.config.transports.includes("file") && this.logStream) {
-      this.logStream.write(`${message}\n`);
+    if (this.#config.transports.includes("file") && this.#logStream) {
+      this.#logStream.write(`${message}\n`);
       this.#rotateFileIfNeeded();
     }
   }
 
   #formatMessage(level: LogLevel, message: string, meta?: LogMeta) {
-    const formatted = `[${level.toUpperCase()}] [${new Date().toISOString()}] ${message}`;
+    const formatted = `${LOG_EMOJIS[level]} [${level.toUpperCase()}] [${new Date().toISOString()}] ${message}`;
 
     if (meta instanceof Error) {
       return `${formatted}\n${meta.stack}`;
@@ -112,7 +119,7 @@ class Logger {
   }
 
   #shouldLog(level: LogLevel) {
-    return LOG_LEVELS[level] >= LOG_LEVELS[this.config.level];
+    return LOG_LEVELS[level] >= LOG_LEVELS[this.#config.level];
   }
 
   debug(message: string, meta?: LogMeta) {
