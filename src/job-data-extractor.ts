@@ -1,6 +1,12 @@
 import { Page } from "playwright";
 import { SELECTORS } from "./constants";
 import { sanitizeText } from "./utils";
+import { createLogger } from "./logger";
+
+const logger = createLogger({
+  level: "debug",
+  transports: ["console", "file"],
+});
 
 export class JobDataExtractor {
   constructor(private page: Page) {}
@@ -78,7 +84,7 @@ export class JobDataExtractor {
       await newPage.close();
       return url.toString();
     } catch (e) {
-      console.error("Failed to get apply link:", e);
+      logger.error("Failed to get apply link", e);
       return "";
     }
   }
@@ -95,28 +101,36 @@ export class JobDataExtractor {
   }
 
   async getJobCards(limit: number) {
-    return this.page.evaluate(
-      ({ selectors, limit }) => {
-        return Array.from(document.querySelectorAll(selectors.jobs))
-          .slice(0, Math.min(limit, 25))
-          .map((job) => ({
-            id: job.getAttribute("data-job-id") || "",
-            title: job.querySelector(selectors.jobTitle)?.textContent || "",
-            link:
-              job.querySelector<HTMLAnchorElement>(selectors.jobLink)?.href ||
-              "",
-            company: job.querySelector(selectors.company)?.textContent || "",
-            companyImgLink: job.querySelector("img")?.getAttribute("src") || "",
-            isPromoted: Array.from(job.querySelectorAll("li")).some(
-              (item) => item.textContent?.trim() === "Promoted",
-            ),
-          }));
-      },
-      { selectors: SELECTORS, limit },
-    );
+    logger.debug("Extracting job cards", { limit });
+    try {
+      return await this.page.evaluate(
+        ({ selectors, limit }) => {
+          return Array.from(document.querySelectorAll(selectors.jobs))
+            .slice(0, Math.min(limit, 25))
+            .map((job) => ({
+              id: job.getAttribute("data-job-id") || "",
+              title: job.querySelector(selectors.jobTitle)?.textContent || "",
+              link:
+                job.querySelector<HTMLAnchorElement>(selectors.jobLink)?.href ||
+                "",
+              company: job.querySelector(selectors.company)?.textContent || "",
+              companyImgLink:
+                job.querySelector("img")?.getAttribute("src") || "",
+              isPromoted: Array.from(job.querySelectorAll("li")).some(
+                (item) => item.textContent?.trim() === "Promoted",
+              ),
+            }));
+        },
+        { selectors: SELECTORS, limit },
+      );
+    } catch (error) {
+      logger.error("Failed to extract job cards", error);
+      return [];
+    }
   }
 
   async getJobDetails() {
+    logger.debug("Extracting full job details");
     const results = await Promise.allSettled([
       this.getDescription(),
       this.getTimeSincePosted(),
@@ -126,6 +140,15 @@ export class JobDataExtractor {
       this.getJobInsights(),
       this.getApplyLink(),
     ]);
+
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        logger.error(
+          `Failed to extract job detail at index ${index}`,
+          result.reason,
+        );
+      }
+    });
 
     return {
       description: results[0].status === "fulfilled" ? results[0].value : [],

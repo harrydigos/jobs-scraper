@@ -81,20 +81,42 @@ class Logger {
     });
   }
 
+  // TODO: handle file rotation better
   /** Rotates log file if it exceeds max size */
   #rotateFileIfNeeded() {
-    if (this.#config.filePath && this.#config.maxFileSize) {
-      try {
-        const stats = statSync(this.#config.filePath);
-        if (stats.size > this.#config.maxFileSize) {
-          this.#logStream?.end();
-          const rotatedPath = `${this.#config.filePath}.${Date.now()}`;
-          renameSync(this.#config.filePath, rotatedPath);
-          this.#initializeFileTransport();
-        }
-      } catch (error) {
-        this.error("Failed to rotate log file", error as Error);
+    if (
+      !this.#config.filePath ||
+      !this.#config.maxFileSize ||
+      !this.#logStream
+    ) {
+      return;
+    }
+
+    try {
+      if (!existsSync(this.#config.filePath)) {
+        return;
       }
+
+      const stats = statSync(this.#config.filePath);
+      if (stats.size > this.#config.maxFileSize) {
+        this.#logStream.end();
+        const rotatedPath = `${this.#config.filePath}.${Date.now()}`;
+        renameSync(this.#config.filePath, rotatedPath);
+
+        // Recreate the log file immediately after rotation
+        this.#logStream = createWriteStream(this.#config.filePath, {
+          flags: "a",
+        });
+      }
+    } catch (error) {
+      console.error("[CRITICAL] Log rotation failed:", error);
+
+      // Disable file transport to prevent infinite loops
+      this.#config.transports = this.#config.transports.filter(
+        (t) => t !== "file",
+      );
+      this.#logStream = undefined;
+      console.error("[CRITICAL] File logging disabled due to rotation failure");
     }
   }
 
