@@ -6,7 +6,15 @@ async function main() {
   try {
     await scraper.initialize({ liAtCookie: process.env.LI_AT_COOKIE! });
 
-    await scraper.searchJobs("software engineer", "greece", 5);
+    await scraper.searchJobs(
+      {
+        keywords: "software engineer",
+        location: "greece",
+        relevance: "recent",
+        remote: ["remote"],
+      },
+      5,
+    );
   } catch (error) {
     console.error("Error:", error);
   } finally {

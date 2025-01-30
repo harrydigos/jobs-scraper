@@ -4,6 +4,7 @@ import { getRandomArbitrary, retry, sanitizeText } from "../utils";
 import { JobDataExtractor } from "./job-data-extractor";
 import { createLogger } from "../utils/logger";
 import type { Job } from "../types";
+import { Filters, RELEVANCE } from "../types/filters";
 
 const logger = createLogger({
   level: "debug",
@@ -12,6 +13,21 @@ const logger = createLogger({
 
 class LinkedInScraper {
   #page: Page | null = null;
+
+  #constructUrl(filters: Filters) {
+    const url = new URL(LI_URLS.jobsSearch);
+    url.searchParams.append("keywords", filters.keywords);
+    url.searchParams.append("location", filters.location);
+
+    if (filters.relevance) {
+      url.searchParams.append("sortBy", RELEVANCE[filters.relevance]);
+    }
+    if (filters.remote) {
+      url.searchParams.append("f_WT", filters.remote.join(","));
+    }
+
+    return url.toString();
+  }
 
   async #isLoggedIn() {
     return await this.#page?.locator(SELECTORS.activeMenu).first().isVisible();
@@ -146,13 +162,13 @@ class LinkedInScraper {
     );
   }
 
-  async searchJobs(keywords: string, location: string, limit = 25) {
+  async searchJobs(filters: Filters, limit = 25) {
     if (!this.#page) {
       logger.error("Scraper not initialized");
       throw new Error("Scraper not initialized");
     }
 
-    const searchUrl = `${LI_URLS.jobsSearch}?keywords=${encodeURIComponent(keywords)}&location=${encodeURIComponent(location)}`;
+    const searchUrl = this.#constructUrl(filters);
 
     await this.#page.goto(searchUrl, { waitUntil: "load" });
 
