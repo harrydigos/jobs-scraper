@@ -4,7 +4,15 @@ import { getRandomArbitrary, retry, sanitizeText } from "../utils";
 import { JobDataExtractor } from "./job-data-extractor";
 import { createLogger } from "../utils/logger";
 import type { Job } from "../types";
-import { Filters, RELEVANCE } from "../types/filters";
+import {
+  DATE_POSTED,
+  EXPERIENCE,
+  Filters,
+  JOB_TYPE,
+  RELEVANCE,
+  REMOTE,
+  URL_PARAMS,
+} from "../types/filters";
 
 const logger = createLogger({
   level: "debug",
@@ -16,14 +24,43 @@ class LinkedInScraper {
 
   #constructUrl(filters: Filters) {
     const url = new URL(LI_URLS.jobsSearch);
-    url.searchParams.append("keywords", filters.keywords);
-    url.searchParams.append("location", filters.location);
+    url.searchParams.append(URL_PARAMS.keywords, filters.keywords);
+    url.searchParams.append(URL_PARAMS.location, filters.location);
 
     if (filters.relevance) {
-      url.searchParams.append("sortBy", RELEVANCE[filters.relevance]);
+      url.searchParams.append(URL_PARAMS.sort, RELEVANCE[filters.relevance]);
     }
-    if (filters.remote) {
-      url.searchParams.append("f_WT", filters.remote.join(","));
+
+    if (filters.remote?.length) {
+      url.searchParams.append(
+        URL_PARAMS.remote,
+        filters.remote.map((r) => REMOTE[r]).join(","),
+      );
+    }
+
+    if (filters.datePosted) {
+      url.searchParams.append(
+        URL_PARAMS.datePosted,
+        DATE_POSTED[filters.datePosted],
+      );
+    }
+
+    if (filters.experience?.length) {
+      url.searchParams.append(
+        URL_PARAMS.experience,
+        filters.experience.map((e) => EXPERIENCE[e]).join(","),
+      );
+    }
+
+    if (filters.jobType?.length) {
+      url.searchParams.append(
+        URL_PARAMS.jobType,
+        filters.jobType.map((t) => JOB_TYPE[t]).join(","),
+      );
+    }
+
+    if (filters.easyApply) {
+      url.searchParams.append(URL_PARAMS.easyApply, `${filters.easyApply}`);
     }
 
     return url.toString();
