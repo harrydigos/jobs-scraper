@@ -2,9 +2,10 @@ export type Job = {
   id: string;
   title: string;
   link: string;
-  description?: string;
+  description: string;
   company: string;
   companyImgLink: string;
+  companySize: string;
   location: string;
   workType: string;
   isPromoted: boolean;

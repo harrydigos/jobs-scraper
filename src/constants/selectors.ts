@@ -7,6 +7,7 @@ export const SELECTORS = {
   jobDescription: ".jobs-description",
   company: ".artdeco-entity-lockup__subtitle",
   companyLink: ".job-details-jobs-unified-top-card__company-name a",
+  companySize: "span.jobs-company__inline-information",
   jobCardSkeletons: [
     ".scaffold-skeleton",
     ".scaffold-skeleton-container",

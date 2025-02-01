@@ -2,6 +2,7 @@ import { Page } from "playwright";
 import { sanitizeText } from "../utils";
 import { createLogger } from "../utils/logger";
 import { SELECTORS } from "../constants";
+import { Job } from "../types";
 
 const logger = createLogger({
   level: "debug",
@@ -33,6 +34,13 @@ export class JobDataExtractor {
       (selector) =>
         document.querySelector(selector)?.getAttribute("href") || "",
       SELECTORS.companyLink,
+    );
+  }
+
+  async getCompanySize() {
+    return this.page.evaluate(
+      (selector) => document.querySelectorAll(selector)?.[0]?.textContent || "",
+      SELECTORS.companySize,
     );
   }
 
@@ -129,8 +137,7 @@ export class JobDataExtractor {
     }
   }
 
-  async getJobDetails() {
-    logger.debug("Extracting full job details");
+  async #getJobDetails() {
     const results = await Promise.allSettled([
       this.getDescription(),
       this.getTimeSincePosted(),
@@ -139,6 +146,7 @@ export class JobDataExtractor {
       this.getRequirements(),
       this.getJobInsights(),
       this.getApplyLink(),
+      this.getCompanySize(),
     ]);
 
     results.forEach((result, index) => {
@@ -159,6 +167,24 @@ export class JobDataExtractor {
       requirements: results[4].status === "fulfilled" ? results[4].value : [],
       jobInsights: results[5].status === "fulfilled" ? results[5].value : [],
       applyLink: results[6].status === "fulfilled" ? results[6].value : "",
+      companySize: results[7].status === "fulfilled" ? results[7].value : "",
     };
+  }
+
+  async extractJobDetails() {
+    logger.debug("Extracting full job details");
+
+    const jobDetails = await this.#getJobDetails();
+    return {
+      description: jobDetails.description.map(sanitizeText).join("\n"),
+      companyLink: jobDetails.companyLink,
+      jobInsights: jobDetails.jobInsights.map(sanitizeText),
+      timeSincePosted: jobDetails.timeSincePosted,
+      skillsRequired: jobDetails.skillsRequired,
+      requirements: jobDetails.requirements,
+      applyLink: jobDetails.applyLink,
+      companySize: sanitizeText(jobDetails.companySize).split(" ")?.[0] || "",
+      isReposted: jobDetails.timeSincePosted.includes("Reposted"),
+    } satisfies Partial<Job>;
   }
 }

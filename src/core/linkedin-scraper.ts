@@ -235,7 +235,8 @@ class LinkedInScraper {
 
       await this.#paginate();
     }
-
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    jobs.map(({ description, ...rest }) => console.log(rest));
     return jobs;
   }
 
@@ -294,28 +295,13 @@ class LinkedInScraper {
           continue;
         }
 
-        const {
-          description,
-          timeSincePosted,
-          companyLink,
-          skillsRequired,
-          requirements,
-          jobInsights,
-          applyLink,
-        } = await extractor.getJobDetails();
-
+        const extractedJobsData = await extractor.extractJobDetails();
         jobs.set(job.id, {
           ...job,
           ...extractor.parseJobLocation(job.company),
+          company: sanitizeText(job.company),
           title: sanitizeText(job.title),
-          companyLink,
-          description: description.map(sanitizeText).join("\n"),
-          jobInsights: jobInsights.map(sanitizeText),
-          timeSincePosted,
-          isReposted: timeSincePosted.includes("Reposted"),
-          skillsRequired,
-          requirements,
-          applyLink,
+          ...extractedJobsData,
         });
 
         await this.#page.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
