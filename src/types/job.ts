@@ -7,7 +7,7 @@ export type Job = {
   companyImgLink: string;
   companySize: string;
   location: string;
-  workType: string;
+  remote: string;
   isPromoted: boolean;
   companyLink: string;
   jobInsights: Array<string>;

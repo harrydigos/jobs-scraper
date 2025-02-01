@@ -97,17 +97,6 @@ export class JobDataExtractor {
     }
   }
 
-  parseJobLocation(companyText: string) {
-    const match = sanitizeText(companyText).match(
-      /^(.*?)\s·\s(.*?)\s\((.*?)\)$/,
-    );
-    return {
-      company: sanitizeText(match?.[1]),
-      location: sanitizeText(match?.[2]),
-      workType: sanitizeText(match?.[3]),
-    };
-  }
-
   async getJobCards(limit: number) {
     logger.debug("Extracting job cards", { limit });
     try {
@@ -115,19 +104,28 @@ export class JobDataExtractor {
         ({ selectors, limit }) => {
           return Array.from(document.querySelectorAll(selectors.jobs))
             .slice(0, Math.min(limit, 25))
-            .map((job) => ({
-              id: job.getAttribute("data-job-id") || "",
-              title: job.querySelector(selectors.jobTitle)?.textContent || "",
-              link:
-                job.querySelector<HTMLAnchorElement>(selectors.jobLink)?.href ||
-                "",
-              company: job.querySelector(selectors.company)?.textContent || "",
-              companyImgLink:
-                job.querySelector("img")?.getAttribute("src") || "",
-              isPromoted: Array.from(job.querySelectorAll("li")).some(
-                (item) => item.textContent?.trim() === "Promoted",
-              ),
-            }));
+            .map((job) => {
+              const meta = (
+                job.querySelector(selectors.cardMetadata)?.textContent || ""
+              ).split("(");
+
+              return {
+                id: job.getAttribute("data-job-id") || "",
+                title: job.querySelector(selectors.jobTitle)?.textContent || "",
+                link:
+                  job.querySelector<HTMLAnchorElement>(selectors.jobLink)
+                    ?.href || "",
+                company:
+                  job.querySelector(selectors.company)?.textContent || "",
+                companyImgLink:
+                  job.querySelector("img")?.getAttribute("src") || "",
+                isPromoted: Array.from(job.querySelectorAll("li")).some(
+                  (item) => item.textContent?.trim() === "Promoted",
+                ),
+                location: meta?.[0] || "",
+                remote: meta?.[1]?.replace(")", "") || "",
+              };
+            });
         },
         { selectors: SELECTORS, limit },
       );

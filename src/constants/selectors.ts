@@ -19,8 +19,7 @@ export const SELECTORS = {
   detailsPanel: ".jobs-search__job-details--container",
   timeSincePosted:
     ".job-details-jobs-unified-top-card__primary-description-container span:nth-of-type(3)",
-
-  // job-card-container__metadata-wrapper
+  cardMetadata: "ul.job-card-container__metadata-wrapper li span",
   insights: ".job-details-jobs-unified-top-card__container--two-pane li",
   skillsRequired: ".job-details-how-you-match__skills-item-subtitle",
   requirements:

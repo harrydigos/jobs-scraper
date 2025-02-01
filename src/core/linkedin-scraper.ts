@@ -298,8 +298,9 @@ class LinkedInScraper {
         const extractedJobsData = await extractor.extractJobDetails();
         jobs.set(job.id, {
           ...job,
-          ...extractor.parseJobLocation(job.company),
           company: sanitizeText(job.company),
+          remote: sanitizeText(job.remote),
+          location: sanitizeText(job.location),
           title: sanitizeText(job.title),
           ...extractedJobsData,
         });
