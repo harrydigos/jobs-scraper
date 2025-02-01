@@ -108,13 +108,16 @@ export class JobDataExtractor {
               const meta = (
                 job.querySelector(selectors.cardMetadata)?.textContent || ""
               ).split("(");
+              const link = new URL(
+                job.querySelector<HTMLAnchorElement>(selectors.jobLink)?.href ||
+                  "",
+              );
+              link.search = "";
 
               return {
                 id: job.getAttribute("data-job-id") || "",
                 title: job.querySelector(selectors.jobTitle)?.textContent || "",
-                link:
-                  job.querySelector<HTMLAnchorElement>(selectors.jobLink)
-                    ?.href || "",
+                link: link.toString(),
                 company:
                   job.querySelector(selectors.company)?.textContent || "",
                 companyImgLink:
