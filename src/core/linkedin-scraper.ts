@@ -167,6 +167,13 @@ class LinkedInScraper {
 
         await this.#waitForSkeletonsToBeRemoved();
 
+        if (
+          await this.#page.getByText(/No matching jobs found./i).isVisible()
+        ) {
+          logger.info("No matching jobs found. Exiting");
+          return { success: false, totalJobs: 0 };
+        }
+
         const list = this.#page.locator(SELECTORS.list).first();
 
         if (!list.isVisible()) {
@@ -174,11 +181,14 @@ class LinkedInScraper {
           throw new Error("No job list found");
         }
 
+        const timeoutDuration = 10000;
+        const startTime = Date.now();
+
         let currentCount = 0;
 
         // Keep scrolling to the last item into view until no more items are loaded
         while (true) {
-          await sleep(200);
+          await sleep(50);
 
           currentCount = await list.evaluate((e, s) => {
             const list = Array.from(e.querySelectorAll(s));
@@ -188,12 +198,17 @@ class LinkedInScraper {
 
           await this.#waitForSkeletonsToBeRemoved();
 
+          if (Date.now() - startTime > timeoutDuration) {
+            logger.warn("Timeout reached, exiting scrolling loop.");
+            return { success: false, totalJobs: currentCount };
+          }
+
           if (currentCount === 25) {
             break; // No new items loaded, exit
           }
         }
 
-        return { success: true as boolean, totalJobs: currentCount };
+        return { success: true, totalJobs: currentCount };
       },
       {
         maxAttempts: 3,
@@ -204,7 +219,7 @@ class LinkedInScraper {
     );
   }
 
-  async searchJobs(filters: Filters, limit = 25) {
+  async searchJobs(filters: Filters, limit = 25, ids?: string[]) {
     if (!this.#page) {
       logger.error("Scraper not initialized");
       throw new Error("Scraper not initialized");
@@ -224,14 +239,17 @@ class LinkedInScraper {
     while (processedJobs < limit) {
       const loadedJobs = await this.#loadJobs();
 
-      if (!loadedJobs.success) {
+      if (!loadedJobs.success && loadedJobs.totalJobs === 0) {
         logger.warn("No jobs found on the current page");
-        return [];
+        return jobs;
       }
 
       logger.info(`Loaded ${loadedJobs.totalJobs} jobs`);
 
-      const extractedJobs = await this.extractJobsData(limit - processedJobs);
+      const extractedJobs = await this.extractJobsData(
+        limit - processedJobs,
+        ids || [],
+      );
       processedJobs += extractedJobs.length;
       jobs.push(...extractedJobs);
 
@@ -281,7 +299,7 @@ class LinkedInScraper {
     );
   }
 
-  async extractJobsData(limit: number) {
+  async extractJobsData(limit: number, ids: string[]) {
     if (!this.#page) {
       logger.error("Failed to load page");
       throw new Error("Failed to load page");
@@ -291,6 +309,10 @@ class LinkedInScraper {
     const extractor = new JobDataExtractor(this.#page);
 
     for (const job of await extractor.getJobCards(limit)) {
+      if (ids.includes(job.id)) {
+        logger.debug("Skipped job because it existed");
+        continue;
+      }
       try {
         await this.#page.locator(`div[data-job-id="${job.id}"]`).click();
         const loadedDetails = await this.#loadJobDetails(job.id);
@@ -310,7 +332,7 @@ class LinkedInScraper {
           ...extractedJobsData,
         });
 
-        await this.#page.waitForTimeout(getRandomArbitrary(300, 1000)); // to handle rate limiting. maybe remove/reduce
+        await this.#page.waitForTimeout(getRandomArbitrary(500, 2500)); // to handle rate limiting. maybe remove/reduce
       } catch (e) {
         logger.error(`Failed to process job ${job.id}`, e);
         continue;
