@@ -1,6 +1,6 @@
 import { chromium, Page } from "playwright";
 import { browserDefaults, LI_URLS, SELECTORS } from "../constants";
-import { getRandomArbitrary, retry, sanitizeText } from "../utils";
+import { getRandomArbitrary, retry, sanitizeText, sleep } from "../utils";
 import { JobDataExtractor } from "./job-data-extractor";
 import { createLogger } from "../utils/logger";
 import type { Job } from "../types";
@@ -70,7 +70,7 @@ class LinkedInScraper {
     return await this.#page?.locator(SELECTORS.activeMenu).first().isVisible();
   }
 
-  async #paginate(paginationSize = 25) {
+  async #paginate(size = 25) {
     if (!this.#page) {
       logger.error("Failed to load page");
       throw new Error("🔴 Failed to load page");
@@ -79,7 +79,7 @@ class LinkedInScraper {
 
     const url = new URL(this.#page.url());
     const offset = Number(url.searchParams.get("start") ?? "0");
-    url.searchParams.set("start", `${offset + paginationSize}`);
+    url.searchParams.set("start", `${offset + size}`);
 
     await this.#page.goto(url.toString(), {
       waitUntil: "load",
@@ -167,28 +167,33 @@ class LinkedInScraper {
 
         await this.#waitForSkeletonsToBeRemoved();
 
-        const getCount = () => this.#page?.locator(SELECTORS.jobs).count();
-        const getLastLocator = () => this.#page?.locator(SELECTORS.jobs).last();
+        const list = this.#page.locator(SELECTORS.list).first();
 
-        let count = await getCount();
-        let lastItemLocator = getLastLocator();
+        if (!list.isVisible()) {
+          logger.error("No job list found");
+          throw new Error("No job list found");
+        }
+
+        let currentCount = 0;
 
         // Keep scrolling to the last item into view until no more items are loaded
         while (true) {
-          await lastItemLocator?.scrollIntoViewIfNeeded();
+          await sleep(200);
+
+          currentCount = await list.evaluate((e, s) => {
+            const list = Array.from(e.querySelectorAll(s));
+            list.at(-1)?.scrollIntoView();
+            return list.length;
+          }, SELECTORS.jobs);
+
           await this.#waitForSkeletonsToBeRemoved();
 
-          const currentCount = await getCount();
-
-          if (currentCount === count) {
+          if (currentCount === 25) {
             break; // No new items loaded, exit
           }
-
-          count = currentCount;
-          lastItemLocator = getLastLocator();
         }
 
-        return { success: true as boolean, totalJobs: count };
+        return { success: true as boolean, totalJobs: currentCount };
       },
       {
         maxAttempts: 3,
@@ -224,6 +229,8 @@ class LinkedInScraper {
         return [];
       }
 
+      logger.info(`Loaded ${loadedJobs.totalJobs} jobs`);
+
       const extractedJobs = await this.extractJobsData(limit - processedJobs);
       processedJobs += extractedJobs.length;
       jobs.push(...extractedJobs);
@@ -235,8 +242,6 @@ class LinkedInScraper {
 
       await this.#paginate();
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    jobs.map(({ description, ...rest }) => console.log(rest));
     return jobs;
   }
 
@@ -305,7 +310,7 @@ class LinkedInScraper {
           ...extractedJobsData,
         });
 
-        await this.#page.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
+        await this.#page.waitForTimeout(getRandomArbitrary(300, 1000)); // to handle rate limiting. maybe remove/reduce
       } catch (e) {
         logger.error(`Failed to process job ${job.id}`, e);
         continue;
