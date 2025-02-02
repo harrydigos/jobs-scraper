@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "client:dev": "pnpm --filter @linkedin-job-scraper/client dev",
     "scraper:clean": "pnpm --filter @linkedin-job-scraper/scraper clean",
     "scraper:build": "pnpm --filter @linkedin-job-scraper/scraper build",
     "scraper:start": "pnpm --filter @linkedin-job-scraper/scraper start",
