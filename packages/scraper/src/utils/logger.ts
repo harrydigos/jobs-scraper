@@ -1,16 +1,10 @@
-import {
-  createWriteStream,
-  existsSync,
-  mkdirSync,
-  renameSync,
-  statSync,
-} from "fs";
-import type { WriteStream } from "fs";
-import path from "path";
-import { format } from "util";
+import { createWriteStream, existsSync, mkdirSync, renameSync, statSync } from 'fs';
+import type { WriteStream } from 'fs';
+import path from 'path';
+import { format } from 'util';
 
-type LogLevel = "debug" | "info" | "warn" | "error";
-type Transport = "console" | "file";
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+type Transport = 'console' | 'file';
 type LogMeta = Record<string, unknown> | Error | unknown | undefined;
 
 type LoggerConfig = {
@@ -28,10 +22,10 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 };
 
 const LOG_EMOJIS = {
-  debug: "🐛",
-  info: "ℹ️",
-  warn: "⚠️",
-  error: "❌",
+  debug: '🐛',
+  info: 'ℹ️',
+  warn: '⚠️',
+  error: '❌',
 } as const;
 
 class Logger {
@@ -41,15 +35,15 @@ class Logger {
 
   private constructor(config: LoggerConfig) {
     this.#config = {
-      level: "info",
-      transports: ["console"],
+      level: 'info',
+      transports: ['console'],
       maxFileSize: 1024 * 1024 * 5, // 5MB
       filePath: `logs/app.log`,
       ...config,
     };
 
-    if (this.#config.transports.includes("file") && !this.#config.filePath) {
-      throw new Error("File path required for file transport");
+    if (this.#config.transports.includes('file') && !this.#config.filePath) {
+      throw new Error('File path required for file transport');
     }
 
     this.#initializeFileTransport();
@@ -57,7 +51,7 @@ class Logger {
   }
 
   #initializeFileTransport() {
-    if (!this.#config.transports.includes("file") || !this.#config.filePath) {
+    if (!this.#config.transports.includes('file') || !this.#config.filePath) {
       return;
     }
 
@@ -66,28 +60,24 @@ class Logger {
       mkdirSync(dir, { recursive: true });
     }
     this.#logStream = createWriteStream(this.#config.filePath, {
-      flags: "a",
+      flags: 'a',
     });
   }
 
   #registerErrorHandlers() {
-    process.on("uncaughtExceptionMonitor", (error) => {
-      this.error("Uncaught Exception", error);
+    process.on('uncaughtExceptionMonitor', (error) => {
+      this.error('Uncaught Exception', error);
       process.exit(1);
     });
-    process.on("unhandledRejection", (reason, promise) => {
-      this.error("Unhandled Rejection at:", { promise, reason });
+    process.on('unhandledRejection', (reason, promise) => {
+      this.error('Unhandled Rejection at:', { promise, reason });
     });
   }
 
   // TODO: handle file rotation better
   /** Rotates log file if it exceeds max size */
   #rotateFileIfNeeded() {
-    if (
-      !this.#config.filePath ||
-      !this.#config.maxFileSize ||
-      !this.#logStream
-    ) {
+    if (!this.#config.filePath || !this.#config.maxFileSize || !this.#logStream) {
       return;
     }
 
@@ -104,27 +94,25 @@ class Logger {
 
         // Recreate the log file immediately after rotation
         this.#logStream = createWriteStream(this.#config.filePath, {
-          flags: "a",
+          flags: 'a',
         });
       }
     } catch (error) {
-      console.error("[CRITICAL] Log rotation failed:", error);
+      console.error('[CRITICAL] Log rotation failed:', error);
 
       // Disable file transport to prevent infinite loops
-      this.#config.transports = this.#config.transports.filter(
-        (t) => t !== "file",
-      );
+      this.#config.transports = this.#config.transports.filter((t) => t !== 'file');
       this.#logStream = undefined;
-      console.error("[CRITICAL] File logging disabled due to rotation failure");
+      console.error('[CRITICAL] File logging disabled due to rotation failure');
     }
   }
 
   #writeToTransports(message: string) {
-    if (this.#config.transports.includes("console")) {
+    if (this.#config.transports.includes('console')) {
       process.stdout.write(`${message}\n`);
     }
 
-    if (this.#config.transports.includes("file") && this.#logStream) {
+    if (this.#config.transports.includes('file') && this.#logStream) {
       this.#logStream.write(`${message}\n`);
       this.#rotateFileIfNeeded();
     }
@@ -144,23 +132,23 @@ class Logger {
   }
 
   debug(message: string, meta?: LogMeta) {
-    if (!this.#shouldLog("debug")) return;
-    this.#writeToTransports(this.#formatMessage("debug", message, meta));
+    if (!this.#shouldLog('debug')) return;
+    this.#writeToTransports(this.#formatMessage('debug', message, meta));
   }
 
   info(message: string, meta?: LogMeta) {
-    if (!this.#shouldLog("info")) return;
-    this.#writeToTransports(this.#formatMessage("info", message, meta));
+    if (!this.#shouldLog('info')) return;
+    this.#writeToTransports(this.#formatMessage('info', message, meta));
   }
 
   warn(message: string, meta?: LogMeta) {
-    if (!this.#shouldLog("warn")) return;
-    this.#writeToTransports(this.#formatMessage("warn", message, meta));
+    if (!this.#shouldLog('warn')) return;
+    this.#writeToTransports(this.#formatMessage('warn', message, meta));
   }
 
   error(message: string, meta?: LogMeta) {
-    if (!this.#shouldLog("error")) return;
-    this.#writeToTransports(this.#formatMessage("error", message, meta));
+    if (!this.#shouldLog('error')) return;
+    this.#writeToTransports(this.#formatMessage('error', message, meta));
   }
 
   static createLogger(config: LoggerConfig = {}) {

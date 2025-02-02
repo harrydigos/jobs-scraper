@@ -1,30 +1,30 @@
-import { readFile, writeFile } from "fs/promises";
-import { parse } from "csv-parse";
-import { Job } from "../types";
+import { readFile, writeFile } from 'fs/promises';
+import { parse } from 'csv-parse';
+import { Job } from '../types';
 
 const allFields = [
-  "id",
-  "title",
-  "link",
-  "description",
-  "company",
-  "companyImgLink",
-  "companySize",
-  "location",
-  "remote",
-  "isPromoted",
-  "companyLink",
-  "jobInsights",
-  "timeSincePosted",
-  "isReposted",
-  "skillsRequired",
-  "requirements",
-  "applyLink",
+  'id',
+  'title',
+  'link',
+  'description',
+  'company',
+  'companyImgLink',
+  'companySize',
+  'location',
+  'remote',
+  'isPromoted',
+  'companyLink',
+  'jobInsights',
+  'timeSincePosted',
+  'isReposted',
+  'skillsRequired',
+  'requirements',
+  'applyLink',
 ] satisfies Array<keyof Job>;
 
 export async function readIdsFromCSV(filePath: string): Promise<string[]> {
   try {
-    const csvData = await readFile(filePath, "utf-8");
+    const csvData = await readFile(filePath, 'utf-8');
     const records = await parse(csvData, {
       columns: true,
       skip_empty_lines: true,
@@ -32,7 +32,7 @@ export async function readIdsFromCSV(filePath: string): Promise<string[]> {
 
     return records.map((record) => record.id).filter(Boolean) as string[];
   } catch (e) {
-    console.error("Error reading CSV file:", e);
+    console.error('Error reading CSV file:', e);
     throw e;
   }
 }
@@ -52,40 +52,40 @@ export async function jobsToCSV(
     );
 
     if (invalidFields?.length) {
-      throw new Error(`Invalid fields selected: ${invalidFields.join(", ")}`);
+      throw new Error(`Invalid fields selected: ${invalidFields.join(', ')}`);
     }
 
-    const csvRows = [headers.join(",")];
+    const csvRows = [headers.join(',')];
 
     for (const job of jobs) {
       const row = headers.map((header) => {
         const value = job[header];
 
         if (value === undefined || value === null) {
-          return "";
+          return '';
         }
 
         if (Array.isArray(value)) {
-          return `"${value.join(";")}"`;
+          return `"${value.join(';')}"`;
         }
 
-        if (typeof value === "string" && value.includes(",")) {
+        if (typeof value === 'string' && value.includes(',')) {
           return `"${value}"`;
         }
 
-        if (typeof value === "boolean") {
+        if (typeof value === 'boolean') {
           return value.toString();
         }
 
         return value;
       });
 
-      csvRows.push(row.join(","));
+      csvRows.push(row.join(','));
     }
 
-    await writeFile(outputPath, csvRows.join("\n"), "utf-8");
+    await writeFile(outputPath, csvRows.join('\n'), 'utf-8');
   } catch (e) {
-    console.error("Error writing CSV file:", e);
+    console.error('Error writing CSV file:', e);
     throw e;
   }
 }

@@ -7,23 +7,10 @@ settings:
 importers:
 
   .:
-    dependencies:
-      csv-parse:
-        specifier: ^5.6.0
-        version: 5.6.0
-      playwright:
-        specifier: ^1.49.1
-        version: 1.49.1
-      rimraf:
-        specifier: ^6.0.1
-        version: 6.0.1
     devDependencies:
       '@eslint/js':
         specifier: ^9.18.0
         version: 9.18.0
-      '@types/node':
-        specifier: ^22.10.5
-        version: 22.10.5
       eslint:
         specifier: ^9.18.0
         version: 9.18.0
@@ -36,6 +23,22 @@ importers:
       typescript-eslint:
         specifier: ^8.20.0
         version: 8.20.0(eslint@9.18.0)(typescript@5.7.3)
+
+  packages/scraper:
+    dependencies:
+      csv-parse:
+        specifier: ^5.6.0
+        version: 5.6.0
+      playwright:
+        specifier: ^1.49.1
+        version: 1.49.1
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.13.0
 
 packages:
 
@@ -115,8 +118,8 @@ packages:
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
-  '@types/node@22.10.5':
-    resolution: {integrity: sha512-F8Q+SeGimwOo86fiovQh8qiXfFEh2/ocYv7tU5pJ3EXMSSxk1Joj5wefpFK2fHTf/N6HKGSxIDBT9f3gCxXPkQ==}
+  '@types/node@22.13.0':
+    resolution: {integrity: sha512-ClIbNe36lawluuvq3+YYhnIN2CELi+6q8NpnM7PYp4hBn/TatfboPgVSm2rwKRfnV2M+Ty9GWDFI64KEe+kysA==}
 
   '@typescript-eslint/eslint-plugin@8.20.0':
     resolution: {integrity: sha512-naduuphVw5StFfqp4Gq4WhIBE2gN1GEmMUExpJYknZJdRnc+2gDzB8Z3+5+/Kv33hPQRDGzQO/0opHE72lZZ6A==}
@@ -718,7 +721,7 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
-  '@types/node@22.10.5':
+  '@types/node@22.13.0':
     dependencies:
       undici-types: 6.20.0
 

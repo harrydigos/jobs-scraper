@@ -58,6 +58,6 @@ export async function retry<T extends RetryResponse>(
 
   return {
     success: false,
-    errorMsg: "🔴 Retry failed",
+    errorMsg: '🔴 Retry failed',
   } as T;
 }
