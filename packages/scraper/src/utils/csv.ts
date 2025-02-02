@@ -37,6 +37,19 @@ export async function readIdsFromCSV(filePath: string): Promise<string[]> {
   }
 }
 
+export async function readRecordsFromCSV(filePath: string) {
+  try {
+    const csvData = await readFile(filePath, 'utf-8');
+    return (await parse(csvData, {
+      columns: true,
+      skip_empty_lines: true,
+    }).toArray()) as Job[];
+  } catch (e) {
+    console.error('Error reading CSV file:', e);
+    throw e;
+  }
+}
+
 export async function jobsToCSV(
   jobs: Partial<Job>[],
   outputPath: string,

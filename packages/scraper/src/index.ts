@@ -1,8 +1,8 @@
+import { setupDatabase, insertJob, getAllJobIds } from './db';
 import { LinkedInScraper } from './core/linkedin-scraper';
-import { jobsToCSV, readIdsFromCSV } from './utils/csv';
 
 async function main() {
-  const ids = await readIdsFromCSV('jobs-1738430201285.csv');
+  setupDatabase();
 
   const scraper = new LinkedInScraper();
 
@@ -19,22 +19,24 @@ async function main() {
         // datePosted: "1",
         jobType: ['fulltime'],
       },
-      320,
-      ids,
+      10,
+      getAllJobIds(),
     );
 
-    await scraper.close();
+    for (const job of jobs.map((j) => ({
+      id: j.id,
+      title: j.title,
+      company: j.company,
+      remote: j.remote,
+      location: j.location,
+      timeSincePosted: j.timeSincePosted,
+      companySize: j.companySize,
+      link: j.link,
+    }))) {
+      insertJob(job);
+    }
 
-    await jobsToCSV(jobs, `jobs-${Date.now()}.csv`, [
-      'id',
-      'title',
-      'company',
-      'remote',
-      'location',
-      'timeSincePosted',
-      'companySize',
-      'link',
-    ]);
+    await scraper.close();
   } catch (error) {
     console.error('Error:', error);
   }

@@ -16,4 +16,6 @@ export type Job = {
   skillsRequired: Array<string>;
   requirements: Array<string>;
   applyLink: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
