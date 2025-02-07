@@ -1,28 +1,26 @@
 {
   "name": "@linkedin-job-scraper/scraper",
   "version": "1.0.0",
-  "description": "",
   "private": true,
-  "main": "./src/index.ts",
+  "type": "commonjs",
   "scripts": {
-    "clean": "rimraf .dist/*",
-    "build": "pnpm run clean && tsc",
-    "start": "pnpm run build && node --env-file=.env .dist/index.js",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "format": "prettier . --write"
+    "clean": "rimraf .dist",
+    "build": "tsc --build",
+    "start2": "pnpm build && npx ts-node ./src/index.ts",
+    "start": "pnpm clean && pnpm build && node dist/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "better-sqlite3": "^11.8.1",
     "csv-parse": "^5.6.0",
+    "database": "workspace:*",
     "playwright": "^1.49.1",
     "rimraf": "^6.0.1"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
-    "@types/node": "^22.10.5"
+    "@types/node": "^22.10.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
   }
 }

@@ -12,7 +12,7 @@ import {
   RELEVANCE,
   REMOTE,
   URL_PARAMS,
-} from '../types/filters';
+} from '../types';
 
 const logger = createLogger({
   level: 'debug',

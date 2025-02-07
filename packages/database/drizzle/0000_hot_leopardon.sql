@@ -1,0 +1,21 @@
+CREATE TABLE `jobs` (
+	`id` text PRIMARY KEY NOT NULL,
+	`created_at` text DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` text DEFAULT CURRENT_TIMESTAMP,
+	`title` text NOT NULL,
+	`link` text NOT NULL,
+	`company` text NOT NULL,
+	`location` text NOT NULL,
+	`description` text,
+	`company_img_link` text,
+	`company_size` text,
+	`remote` text,
+	`is_promoted` integer,
+	`company_link` text,
+	`job_insights` text,
+	`time_since_posted` text,
+	`is_reposted` integer,
+	`skills_required` text,
+	`requirements` text,
+	`apply_link` text
+);
