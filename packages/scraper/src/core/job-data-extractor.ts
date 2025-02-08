@@ -1,7 +1,7 @@
 import type { Page } from 'playwright';
 import { sanitizeText, createLogger } from '~/utils/index.ts';
 import { SELECTORS } from '~/constants/selectors.ts';
-import type { Job } from '~/types/index.ts';
+import type { Job, NewJob } from 'database';
 
 const logger = createLogger({
   level: 'debug',
@@ -133,50 +133,66 @@ export class JobDataExtractor {
     }
   }
 
-  async #getJobDetails() {
-    const results = await Promise.allSettled([
-      this.getDescription(),
-      this.getTimeSincePosted(),
-      this.getCompanyLink(),
-      this.getSkills(),
-      this.getRequirements(),
-      this.getJobInsights(),
-      this.getApplyLink(),
-      this.getCompanySize(),
-    ]);
-
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        logger.error(`Failed to extract job detail at index ${index}`, result.reason);
-      }
-    });
-
-    return {
-      description: results[0].status === 'fulfilled' ? results[0].value : [],
-      timeSincePosted: results[1].status === 'fulfilled' ? results[1].value : '',
-      companyLink: results[2].status === 'fulfilled' ? results[2].value : '',
-      skillsRequired: results[3].status === 'fulfilled' ? results[3].value : [],
-      requirements: results[4].status === 'fulfilled' ? results[4].value : [],
-      jobInsights: results[5].status === 'fulfilled' ? results[5].value : [],
-      applyLink: results[6].status === 'fulfilled' ? results[6].value : '',
-      companySize: results[7].status === 'fulfilled' ? results[7].value : '',
+  async #getJobDetails(excludeFields: Set<keyof Job> = new Set()) {
+    console.log({ excludeFields });
+    const tasks = {
+      description: excludeFields.has('description') ? undefined : this.getDescription(),
+      timeSincePosted: excludeFields.has('timeSincePosted') ? undefined : this.getTimeSincePosted(),
+      companyLink: excludeFields.has('companyLink') ? undefined : this.getCompanyLink(),
+      skillsRequired: excludeFields.has('skillsRequired') ? undefined : this.getSkills(),
+      requirements: excludeFields.has('requirements') ? undefined : this.getRequirements(),
+      jobInsights: excludeFields.has('jobInsights') ? undefined : this.getJobInsights(),
+      applyLink: excludeFields.has('applyLink') ? undefined : this.getApplyLink(),
+      companySize: excludeFields.has('companySize') ? undefined : this.getCompanySize(),
     };
+    const results = await Promise.allSettled(Object.values(tasks).filter(Boolean));
+
+    let resultIndex = 0;
+    const jobDetails: Partial<NewJob> = {};
+
+    for (const key of Object.keys(tasks)) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      if (!tasks?.[key]) {
+        continue;
+      }
+      const result = results[resultIndex++];
+      if (result.status === 'fulfilled') {
+        Reflect.set(jobDetails, key, result.value);
+      } else {
+        logger.error(`Failed to extract job detail: ${key}`, result.reason);
+      }
+    }
+
+    return jobDetails;
   }
 
-  async extractJobDetails() {
-    logger.debug('Extracting full job details');
+  async extractJobDetails(opts?: { excludeFields?: (keyof Job)[] }) {
+    const excludeFields = new Set(opts?.excludeFields || []);
 
-    const jobDetails = await this.#getJobDetails();
+    if (excludeFields.size) {
+      logger.debug('Extracting job details except', opts!.excludeFields!.join(', '));
+    } else {
+      logger.debug('Extracting full job details');
+    }
+    const jobDetails = await this.#getJobDetails(excludeFields);
+
     return {
-      description: jobDetails.description.map(sanitizeText).join('\n'),
+      description: jobDetails.description
+        ? (jobDetails.description as unknown as string[]).map(sanitizeText).join('\n')
+        : undefined,
       companyLink: jobDetails.companyLink,
-      jobInsights: jobDetails.jobInsights.map(sanitizeText),
+      jobInsights: jobDetails.jobInsights ? jobDetails.jobInsights.map(sanitizeText) : undefined,
       timeSincePosted: jobDetails.timeSincePosted,
       skillsRequired: jobDetails.skillsRequired,
       requirements: jobDetails.requirements,
       applyLink: jobDetails.applyLink,
-      companySize: sanitizeText(jobDetails.companySize).split(' ')?.[0] || '',
-      isReposted: jobDetails.timeSincePosted.includes('Reposted'),
-    } satisfies Partial<Job>;
+      companySize: jobDetails.companySize
+        ? sanitizeText(jobDetails.companySize).split(' ')?.[0] || ''
+        : undefined,
+      isReposted: jobDetails.timeSincePosted
+        ? jobDetails.timeSincePosted.includes('Reposted')
+        : undefined,
+    } satisfies Partial<NewJob>;
   }
 }

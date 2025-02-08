@@ -10,11 +10,12 @@
     "db:check": "turbo run db:check",
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",
-    "scraper:start": "turbo run scraper:start",
+    "scraper:start": "dotenv -- turbo run scraper:start",
     "web:dev": "pnpm --filter @linkedin-job-scraper/web dev"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "dotenv-cli": "^8.0.0",
     "eslint": "^9.18.0",
     "prettier": "^3.4.2",
     "turbo": "^2.4.0",

@@ -1,6 +1,6 @@
 import { leadingAndTrailing, throttle } from '@solid-primitives/scheduled';
 import { createAsync, query, RouteDefinition, useSearchParams } from '@solidjs/router';
-import { db, Job, jobs, like, or } from 'database';
+import { db, desc, getAllJobsCount, Job, jobs, like, or } from 'database';
 import { For, Show, createSignal } from 'solid-js';
 
 const getJobs = query(async (search = '') => {
@@ -9,8 +9,14 @@ const getJobs = query(async (search = '') => {
   return await db
     .select()
     .from(jobs)
-    .where(or(like(jobs.title, search), or(like(jobs.company, search))));
+    .where(or(like(jobs.title, search), or(like(jobs.company, search))))
+    .orderBy(desc(jobs.createdAt));
 }, 'jobs');
+
+const totalJobs = query(async () => {
+  'use server';
+  return await getAllJobsCount();
+}, 'jobs-count');
 
 export const route = {
   preload: () => getJobs(),
@@ -43,6 +49,8 @@ const JobTable = () => {
       (await getJobs(Array.isArray(searchParams?.search) ? '' : searchParams.search || '')) || []
     );
   });
+
+  const jobCount = createAsync(() => totalJobs());
 
   return (
     <main class="p-4 max-w-7xl mx-auto">
@@ -103,7 +111,7 @@ const JobTable = () => {
         </div>
 
         <div class="mt-4 text-sm text-gray-500">
-          Showing {tableData()?.length} of {tableData()?.length} records
+          Showing {tableData()?.length} of {jobCount()?.[0].count || 0} records
         </div>
       </div>
     </main>

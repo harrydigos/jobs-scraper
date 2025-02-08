@@ -1,22 +1,13 @@
 import { db, jobs } from 'database';
 import { LinkedInScraper } from '~/core/linkedin-scraper.ts';
 
-export function getAllJobs() {
-  return db.select().from(jobs);
-}
-
 async function main() {
-  try {
-    console.log('jobs', await getAllJobs());
-  } catch {
-    console.log('errorn in scraper');
-  }
   const scraper = new LinkedInScraper();
 
   try {
     await scraper.initialize({ liAtCookie: process.env.LI_AT_COOKIE! });
 
-    await scraper.searchJobs(
+    const res = await scraper.searchJobs(
       {
         keywords: 'software engineer',
         location: 'greece',
@@ -26,8 +17,21 @@ async function main() {
         // datePosted: "1",
         jobType: ['fulltime'],
       },
-      10,
+      500,
+      [],
+      ['description', 'applyLink', 'isReposted', 'skillsRequired', 'jobInsights'],
     );
+
+    await db
+      .insert(jobs)
+      .values(res)
+      .onConflictDoUpdate({
+        target: jobs.id,
+        set: {
+          updatedAt: new Date().toISOString(),
+          timeSincePosted: jobs.timeSincePosted,
+        },
+      });
 
     await scraper.close();
   } catch (error) {

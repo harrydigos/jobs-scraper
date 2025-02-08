@@ -10,8 +10,8 @@ import {
   RELEVANCE,
   REMOTE,
   URL_PARAMS,
-  type Job,
 } from '~/types/index.ts';
+import type { Job, NewJob } from 'database';
 
 const logger = createLogger({
   level: 'debug',
@@ -213,7 +213,7 @@ class LinkedInScraper {
     );
   }
 
-  async searchJobs(filters: Filters, limit = 25, ids?: string[]) {
+  async searchJobs(filters: Filters, limit = 25, ids?: string[], excludeFields?: (keyof Job)[]) {
     if (!this.#page) {
       logger.error('Scraper not initialized');
       throw new Error('Scraper not initialized');
@@ -228,7 +228,7 @@ class LinkedInScraper {
     logger.info('Search jobs page');
 
     let processedJobs = 0;
-    const jobs: Job[] = [];
+    const jobs: NewJob[] = [];
 
     while (processedJobs < limit) {
       const loadedJobs = await this.#loadJobs();
@@ -240,7 +240,11 @@ class LinkedInScraper {
 
       logger.info(`Loaded ${loadedJobs.totalJobs} jobs`);
 
-      const extractedJobs = await this.extractJobsData(limit - processedJobs, ids || []);
+      const extractedJobs = await this.extractJobsData(
+        limit - processedJobs,
+        ids || [],
+        excludeFields || [],
+      );
       processedJobs += extractedJobs.length;
       jobs.push(...extractedJobs);
 
@@ -290,13 +294,13 @@ class LinkedInScraper {
     );
   }
 
-  async extractJobsData(limit: number, ids: string[]) {
+  async extractJobsData(limit: number, ids: string[], excludeFields: (keyof Job)[]) {
     if (!this.#page) {
       logger.error('Failed to load page');
       throw new Error('Failed to load page');
     }
 
-    const jobs = new Map<string, Job>();
+    const jobs = new Map<string, NewJob>();
     const extractor = new JobDataExtractor(this.#page);
 
     for (const job of await extractor.getJobCards(limit)) {
@@ -313,17 +317,25 @@ class LinkedInScraper {
           continue;
         }
 
-        const extractedJobsData = await extractor.extractJobDetails();
-        jobs.set(job.id, {
+        const extractedJobsData = await extractor.extractJobDetails({ excludeFields });
+        const jobData = {
           ...job,
           company: sanitizeText(job.company),
           remote: sanitizeText(job.remote),
           location: sanitizeText(job.location),
           title: sanitizeText(job.title),
           ...extractedJobsData,
-        });
+        };
+
+        // check again here. TODO: maybe remove
+        for (const field of excludeFields) {
+          Reflect.deleteProperty(jobData, field);
+        }
+
+        jobs.set(job.id, jobData);
 
         await this.#page.waitForTimeout(getRandomArbitrary(500, 2500)); // to handle rate limiting. maybe remove/reduce
+        // await this.#page.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
       } catch (e) {
         logger.error(`Failed to process job ${job.id}`, e);
         continue;
