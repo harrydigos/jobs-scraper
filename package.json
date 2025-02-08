@@ -2,23 +2,16 @@
   "name": "linkedin-job-scraper",
   "private": true,
   "scripts": {
-    "web:dev": "pnpm --filter @linkedin-job-scraper/web dev",
-    "scraper:clean": "pnpm --filter @linkedin-job-scraper/scraper clean",
-    "scraper:build": "pnpm --filter @linkedin-job-scraper/scraper build",
-    "scraper:start": "pnpm --filter @linkedin-job-scraper/scraper start",
-    "scraper:lint": "pnpm --filter @linkedin-job-scraper/scraper lint",
-    "scraper:lint:fix": "pnpm --filter @linkedin-job-scraper/scraper lint:fix",
-    "scraper:format": "pnpm --filter @linkedin-job-scraper/scraper format",
-    "tsc:check2": "pnpm -r exec -- tsc --noEmit",
-    "tsc:check": "pnpm -r exec tsc --noEmit --project tsconfig.json --skipLibCheck --excludeDirectories node_modules,dist",
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md}\"",
+    "tsc:check": "pnpm -r exec tsc --noEmit --project tsconfig.json --skipLibCheck --excludeDirectories node_modules,dist",
     "db:check": "turbo run db:check",
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",
-    "scraper": "turbo run scraper:start"
+    "scraper:start": "turbo run scraper:start",
+    "web:dev": "pnpm --filter @linkedin-job-scraper/web dev"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",

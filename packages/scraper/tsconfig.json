@@ -1,119 +1,21 @@
-// {
-//   "compilerOptions": {
-//     "target": "ESNext",
-//     "lib": ["ESNext", "DOM"],
-//     "module": "ESNext",
-//     "moduleResolution": "node",
-//     "strict": true,
-//     "esModuleInterop": true,
-//     "skipLibCheck": true,
-//     "forceConsistentCasingInFileNames": true,
-//     "resolveJsonModule": true,
-//     "isolatedModules": true,
-//     "noUncheckedIndexedAccess": true,
-//     "noImplicitAny": true,
-//     "noImplicitThis": true,
-//     "strictNullChecks": true,
-//     "rootDir": "src",
-//     "outDir": ".dist"
-//   },
-//   "include": ["src"],
-//   "exclude": ["node_modules", ".dist"]
-// }
-
-// {
-//   "compilerOptions": {
-//     "target": "ESNext",
-//     "module": "ESNext",
-//     "moduleResolution": "node",
-//     // "lib": ["es6"],
-//     "allowJs": true,
-//     "outDir": ".dist",
-//     "rootDir": "src",
-//     "strict": true,
-//     "noImplicitAny": true,
-//     "esModuleInterop": true,
-//     "skipLibCheck": true,
-//     "forceConsistentCasingInFileNames": true
-//   },
-//   "include": ["src"],
-//   "exclude": ["node_modules", ".dist"]
-// }
-
-// {
-//   "compilerOptions": {
-//     "target": "es2020",
-//     "module": "nodenext",
-//     "moduleResolution": "nodenext",
-//     "outDir": "./dist",
-//     "rootDir": "./src",
-//     "strict": true,
-//     "esModuleInterop": true,
-//     "skipLibCheck": true,
-//     "forceConsistentCasingInFileNames": true
-//   },
-//   "include": ["src/**/*"]
-// }
-
-// {
-//   "compilerOptions": {
-//     "target": "es2020",
-//     "module": "commonjs",
-//     "moduleResolution": "node",
-//     "outDir": "./dist",
-//     "rootDir": "./src",
-//     "strict": true,
-//     "esModuleInterop": true,
-//     "skipLibCheck": true,
-//     "forceConsistentCasingInFileNames": true
-//   },
-//   "include": ["src/**/*"]
-// }
-
-// {
-//   "compilerOptions": {
-//     // "noEmit": true,
-//     // "allowImportingTsExtensions": true,
-//     "target": "es2020",
-//     "module": "CommonJS",
-//     "moduleResolution": "node",
-//     "outDir": "./dist",
-//     "rootDir": "./src",
-//     "strict": true,
-//     "esModuleInterop": true,
-//     "skipLibCheck": true,
-//     "forceConsistentCasingInFileNames": true,
-//     "allowJs": true
-//   },
-//   "include": ["src/**/*"]
-// }
-
 {
   "compilerOptions": {
     "target": "ESNext",
-    // "module": "ESNext",
-    // "moduleResolution": "bundler",
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    // "jsx": "preserve",
-    // "jsxImportSource": "solid-js",
     "allowJs": true,
     "noEmit": true,
     "strict": true,
     "types": ["node"],
     "isolatedModules": true,
-
-    "paths": {
-      "~/*": ["./src/*"]
-    },
-    //mine
-
-    "module": "NodeNext",
-    "moduleResolution": "nodenext",
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
-
     "allowImportingTsExtensions": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "~/*": ["./src/*"]
+    }
   }
 }
