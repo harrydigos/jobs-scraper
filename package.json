@@ -2,7 +2,7 @@
   "name": "linkedin-job-scraper",
   "private": true,
   "scripts": {
-    "client:dev": "pnpm --filter @linkedin-job-scraper/client dev",
+    "web:dev": "pnpm --filter @linkedin-job-scraper/web dev",
     "scraper:clean": "pnpm --filter @linkedin-job-scraper/scraper clean",
     "scraper:build": "pnpm --filter @linkedin-job-scraper/scraper build",
     "scraper:start": "pnpm --filter @linkedin-job-scraper/scraper start",

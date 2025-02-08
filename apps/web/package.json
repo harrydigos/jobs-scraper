@@ -1,0 +1,25 @@
+{
+  "name": "@linkedin-job-scraper/web",
+  "type": "module",
+  "scripts": {
+    "dev": "vinxi dev",
+    "build": "vinxi build",
+    "start": "vinxi start"
+  },
+  "dependencies": {
+    "@solidjs/router": "^0.15.0",
+    "@solidjs/start": "^1.0.11",
+    "solid-js": "^1.9.2",
+    "vinxi": "^0.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.4",
+    "tailwindcss": "^4.0.4"
+  },
+  "overrides": {
+    "vite": "5.4.10"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
