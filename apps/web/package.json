@@ -7,6 +7,7 @@
     "start": "vinxi start"
   },
   "dependencies": {
+    "@solid-primitives/scheduled": "^1.5.0",
     "@solidjs/router": "^0.15.0",
     "@solidjs/start": "^1.0.11",
     "database": "workspace:*",
