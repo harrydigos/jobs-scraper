@@ -26,4 +26,4 @@ export const browserDefaults = {
   // timeout: 30000,
 } satisfies LaunchOptions;
 
-export * from './selectors';
+export * from './selectors.ts';

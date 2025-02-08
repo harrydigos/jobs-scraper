@@ -70,18 +70,50 @@
 //   "include": ["src/**/*"]
 // }
 
+// {
+//   "compilerOptions": {
+//     // "noEmit": true,
+//     // "allowImportingTsExtensions": true,
+//     "target": "es2020",
+//     "module": "CommonJS",
+//     "moduleResolution": "node",
+//     "outDir": "./dist",
+//     "rootDir": "./src",
+//     "strict": true,
+//     "esModuleInterop": true,
+//     "skipLibCheck": true,
+//     "forceConsistentCasingInFileNames": true,
+//     "allowJs": true
+//   },
+//   "include": ["src/**/*"]
+// }
+
 {
   "compilerOptions": {
-    "target": "es2020",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
+    "target": "ESNext",
+    // "module": "ESNext",
+    // "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    // "jsx": "preserve",
+    // "jsxImportSource": "solid-js",
+    "allowJs": true,
+    "noEmit": true,
+    "strict": true,
+    "types": ["node"],
+    "isolatedModules": true,
+
+    "paths": {
+      "~/*": ["./src/*"]
+    },
+    //mine
+
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
     "forceConsistentCasingInFileNames": true,
-    "allowJs": true
-  },
-  "include": ["src/**/*"]
+    "verbatimModuleSyntax": true,
+
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true
+  }
 }

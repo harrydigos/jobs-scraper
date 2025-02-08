@@ -1,18 +1,17 @@
-import { chromium, Page } from 'playwright';
-import { browserDefaults, LI_URLS, SELECTORS } from '../constants';
-import { getRandomArbitrary, retry, sanitizeText, sleep } from '../utils';
-import { JobDataExtractor } from './job-data-extractor';
-import { createLogger } from '../utils/logger';
-import type { Job } from '../types';
+import { chromium, type Page } from 'playwright';
+import { browserDefaults, LI_URLS, SELECTORS } from '~/constants/index.ts';
+import { getRandomArbitrary, retry, sanitizeText, sleep, createLogger } from '~/utils/index.ts';
+import { JobDataExtractor } from '~/core/job-data-extractor.ts';
 import {
   DATE_POSTED,
   EXPERIENCE,
-  Filters,
+  type Filters,
   JOB_TYPE,
   RELEVANCE,
   REMOTE,
   URL_PARAMS,
-} from '../types';
+  type Job,
+} from '~/types/index.ts';
 
 const logger = createLogger({
   level: 'debug',
@@ -106,6 +105,11 @@ class LinkedInScraper {
   }
 
   async initialize({ liAtCookie }: { liAtCookie: string }) {
+    if (!liAtCookie) {
+      console.error('liAtCookie must be provided.');
+      process.exit(1);
+    }
+
     logger.info('Connecting to a scraping browser');
     const browser = await chromium.launch(browserDefaults);
     logger.info('Connected, navigating...');

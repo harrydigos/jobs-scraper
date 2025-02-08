@@ -1,6 +1,5 @@
-import { LinkedInScraper } from './core/linkedin-scraper';
-
 import { db, jobs } from 'database';
+import { LinkedInScraper } from '~/core/linkedin-scraper.ts';
 
 export function getAllJobs() {
   return db.select().from(jobs);

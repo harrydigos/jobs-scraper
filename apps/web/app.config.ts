@@ -2,7 +2,6 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from '@solidjs/start/config';
 
 export default defineConfig({
-  ssr: false,
   server: {
     compatibilityDate: '2025-02-08',
   },

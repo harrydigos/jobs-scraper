@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'fs/promises';
 import { parse } from 'csv-parse';
-import { Job } from '../types';
+import type { Job } from '~/types/index.ts';
 
 const allFields = [
   'id',
