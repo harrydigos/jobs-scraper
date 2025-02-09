@@ -1,10 +1,17 @@
-import eslint from "@eslint/js";
-import tseslint from "typescript-eslint";
+import eslint from '@eslint/js';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import tseslint from 'typescript-eslint';
+import solid from 'eslint-plugin-solid/configs/recommended';
 
-export default tseslint.config(
+export default [
   eslint.configs.recommended,
-  tseslint.configs.recommended,
+  ...tseslint.configs.recommended,
+  eslintPluginPrettierRecommended,
   {
-    ignores: ["node_modules/**", ".dist/**"],
+    files: ['apps/web/**/*.{ts,tsx}'],
+    ...solid,
   },
-);
+  {
+    ignores: ['node_modules/**', '.dist/**'],
+  },
+];
