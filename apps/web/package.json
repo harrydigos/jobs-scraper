@@ -1,8 +1,8 @@
 {
-  "name": "@linkedin-job-scraper/web",
+  "name": "web",
   "type": "module",
   "scripts": {
-    "dev": "vinxi dev",
+    "web:dev": "vinxi dev",
     "build": "vinxi build",
     "start": "vinxi start"
   },

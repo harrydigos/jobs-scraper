@@ -14,10 +14,10 @@ async function main() {
         relevance: 'recent',
         remote: ['remote', 'hybrid'],
         experience: ['mid-senior'],
-        // datePosted: "1",
+        // datePosted: '1',
         jobType: ['fulltime'],
       },
-      500,
+      50,
       [],
       ['description', 'applyLink', 'isReposted', 'skillsRequired', 'jobInsights'],
     );

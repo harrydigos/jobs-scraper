@@ -134,7 +134,6 @@ export class JobDataExtractor {
   }
 
   async #getJobDetails(excludeFields: Set<keyof Job> = new Set()) {
-    console.log({ excludeFields });
     const tasks = {
       description: excludeFields.has('description') ? undefined : this.getDescription(),
       timeSincePosted: excludeFields.has('timeSincePosted') ? undefined : this.getTimeSincePosted(),
