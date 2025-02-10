@@ -1,5 +1,6 @@
 import { leadingAndTrailing, throttle } from '@solid-primitives/scheduled';
 import { createAsync, query, RouteDefinition, useSearchParams } from '@solidjs/router';
+import { ColumnDef, createSolidTable, flexRender, getCoreRowModel } from '@tanstack/solid-table';
 import { db, desc, getAllJobsCount, Job, jobs, like, or } from 'database';
 import { For, Show, createSignal } from 'solid-js';
 
@@ -22,18 +23,58 @@ export const route = {
   preload: () => getJobs(),
 } satisfies RouteDefinition;
 
-const HEADERS = [
-  'id',
-  'createdAt',
-  'updatedAt',
-  'title',
-  'company',
-  'remote',
-  'location',
-  'timeSincePosted',
-  'companySize',
-  'link',
-] satisfies (keyof Job)[];
+const defaultColumns: ColumnDef<Job>[] = [
+  {
+    accessorKey: 'id',
+    header: () => 'ID',
+  },
+  {
+    accessorKey: 'createdAt',
+    header: () => 'Created At',
+  },
+  {
+    accessorKey: 'updatedAt',
+    header: () => 'Updated At',
+  },
+  {
+    accessorKey: 'title',
+    header: () => 'Job Title',
+  },
+  {
+    accessorKey: 'company',
+    header: () => 'Company',
+  },
+  {
+    accessorKey: 'remote',
+    header: () => 'Remote',
+  },
+  {
+    accessorKey: 'location',
+    header: () => 'Location',
+  },
+  {
+    accessorKey: 'timeSincePosted',
+    header: () => 'Time Since Posted',
+  },
+  {
+    accessorKey: 'companySize',
+    header: () => 'Company Size',
+  },
+  {
+    accessorKey: 'link',
+    header: () => 'Link',
+    cell: (info) => {
+      const value = info.getValue<string>();
+      return (
+        <Show when={value?.startsWith('https://')} fallback="-">
+          <a href={value} target="_blank">
+            Link
+          </a>
+        </Show>
+      );
+    },
+  },
+];
 
 const JobTable = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -51,6 +92,15 @@ const JobTable = () => {
   });
 
   const jobCount = createAsync(() => totalJobs());
+
+  const table = createSolidTable({
+    get data() {
+      return tableData() || [];
+    },
+    columns: defaultColumns,
+    getCoreRowModel: getCoreRowModel(),
+    rowCount: jobCount()?.[0].count || 0,
+  });
 
   return (
     <main class="p-4 max-w-7xl mx-auto">
@@ -70,37 +120,24 @@ const JobTable = () => {
         </div>
 
         <div class="overflow-x-auto rounded-lg border border-gray-200">
+          <div class="mt-4 text-sm text-gray-500">Total jobs: {table.getRowCount()}</div>
           <table class="w-full">
             <thead>
               <tr class="bg-gray-50">
-                <For each={HEADERS}>
+                <For each={table.getFlatHeaders()}>
                   {(header) => (
-                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      {header}
-                    </th>
+                    <th>{flexRender(header.column.columnDef.header, header.getContext())}</th>
                   )}
                 </For>
               </tr>
             </thead>
             <tbody>
-              <For each={tableData()}>
+              <For each={table.getRowModel().rows}>
                 {(row) => (
                   <tr class="hover:bg-gray-50">
-                    <For each={HEADERS}>
-                      {(header) => (
-                        <td class="px-4 py-3 text-sm text-gray-700 border-b">
-                          <Show
-                            when={
-                              typeof row?.[header] === 'string' &&
-                              row[header].startsWith('https://')
-                            }
-                            fallback={row[header]}
-                          >
-                            <a href={row[header] as string} target="_blank">
-                              Link
-                            </a>
-                          </Show>
-                        </td>
+                    <For each={row.getVisibleCells()}>
+                      {(cell) => (
+                        <td>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                       )}
                     </For>
                   </tr>
@@ -108,10 +145,6 @@ const JobTable = () => {
               </For>
             </tbody>
           </table>
-        </div>
-
-        <div class="mt-4 text-sm text-gray-500">
-          Showing {tableData()?.length} of {jobCount()?.[0].count || 0} records
         </div>
       </div>
     </main>
