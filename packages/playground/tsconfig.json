@@ -11,13 +11,7 @@
     "types": ["node"],
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true,
-    "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": true,
-    "skipLibCheck": true,
-    "paths": {
-      "~/*": ["./src/*"]
-    },
-    "outDir": "./dist"
-  },
-  "exclude": ["dist", "node_modules"]
+    "skipLibCheck": true
+  }
 }

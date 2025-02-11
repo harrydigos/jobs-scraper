@@ -10,8 +10,10 @@
     "db:check": "turbo run db:check",
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",
-    "scraper:start": "dotenv -- turbo run scraper:start",
-    "web:dev": "turbo run web:dev"
+    "scraper:start": "turbo run scraper:start",
+    "scraper:build": "turbo run scraper:build",
+    "web:dev": "turbo run web:dev",
+    "playground:start": "dotenv -- turbo run playground:start"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",

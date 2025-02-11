@@ -27,6 +27,12 @@
       "cache": false
     },
     "scraper:start": {
+      "cache": false
+    },
+    "scraper:build": {
+      "cache": false
+    },
+    "playground:start": {
       "cache": false,
       "env": ["LI_AT_COOKIE"]
     },
