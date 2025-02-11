@@ -5,5 +5,5 @@ export default defineConfig({
   server: {
     compatibilityDate: '2025-02-08',
   },
-  vite: { plugins: [tailwindcss() as unknown as Plugin] }, // TODO: fix
+  vite: { plugins: [tailwindcss()] },
 });
