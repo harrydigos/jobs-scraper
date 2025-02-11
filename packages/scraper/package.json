@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "scraper:build": "tsup",
+    "build": "tsup",
     "scraper:dev": "tsup --watch"
   },
   "keywords": [],

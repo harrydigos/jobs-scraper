@@ -29,6 +29,9 @@ importers:
       prettier:
         specifier: ^3.4.2
         version: 3.4.2
+      sherif:
+        specifier: ^1.3.0
+        version: 1.3.0
       turbo:
         specifier: ^2.4.0
         version: 2.4.0
@@ -86,7 +89,7 @@ importers:
         specifier: ^0.30.4
         version: 0.30.4
       typescript:
-        specifier: ^5.2.2
+        specifier: ^5.7.3
         version: 5.7.3
 
   packages/playground:
@@ -3521,6 +3524,40 @@ packages:
   shebang-regex@3.0.0:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
+
+  sherif-darwin-arm64@1.3.0:
+    resolution: {integrity: sha512-vwt1txYQYxETI8390pHptuS2+TckM3rZRdSvuDlI+1bA9Pbqc1Ad9bXq7iNGZcb+0eFbimoIqJWqi0d5ailDew==}
+    cpu: [arm64]
+    os: [darwin]
+
+  sherif-darwin-x64@1.3.0:
+    resolution: {integrity: sha512-POrNEfVQ+HJYWiiDwC9fVAumc/MIRqYrnmW+zvY2khusWr1sQitNcc4qAtz/iDJktqQqFIQ4J0h+pSWa84sxDg==}
+    cpu: [x64]
+    os: [darwin]
+
+  sherif-linux-arm64@1.3.0:
+    resolution: {integrity: sha512-kftGHdZRat1p2PntW6vXC+TqPQI6Sm55Zxi3gfXZiz1knFY53dJHr+MaP1W6DlzJ+DhOuZzJ4HkfT/K3/5BPUA==}
+    cpu: [arm64]
+    os: [linux]
+
+  sherif-linux-x64@1.3.0:
+    resolution: {integrity: sha512-9nbK5wqazisbhHGJ+t/DQM8Cr1QEgOSJ4J071wrLrYNEcvr/9PMkKXmX2YJdY9VWKz+AIohXJ2ZkXtB/oEyPDQ==}
+    cpu: [x64]
+    os: [linux]
+
+  sherif-windows-arm64@1.3.0:
+    resolution: {integrity: sha512-q+tkYx0kSAm8bUpt8jAv1JQMZolG4sTXwVH/CAU47ukPO8t4ghzEEhPZDdJYcDf6co7D2V1JbXdfaG9u1+3d+w==}
+    cpu: [arm64]
+    os: [win32]
+
+  sherif-windows-x64@1.3.0:
+    resolution: {integrity: sha512-bd0mS6GIs0Mwdx9nP7deFATzGM5AVw3wUv/fRoum3bRkJNKJrm5HTh9cKuXiz6gc3pHjUUZOnKL0i7fZGfu+ew==}
+    cpu: [x64]
+    os: [win32]
+
+  sherif@1.3.0:
+    resolution: {integrity: sha512-UeCSc/Jx33ykalVx07Z/aHu0XKwg/UL5qprU+fYll97atJXLPZhy+FefPrDDEohzkQZ2jZbb6q4TX/crKuoJEA==}
+    hasBin: true
 
   shiki@1.29.2:
     resolution: {integrity: sha512-njXuliz/cP+67jU2hukkxCNuH1yUi4QfdZZY+sMr5PPrIyXSu5iTb/qYC4BiWWB0vZ+7TbdvYUCeL23zpwCfbg==}
@@ -7230,6 +7267,33 @@ snapshots:
       shebang-regex: 3.0.0
 
   shebang-regex@3.0.0: {}
+
+  sherif-darwin-arm64@1.3.0:
+    optional: true
+
+  sherif-darwin-x64@1.3.0:
+    optional: true
+
+  sherif-linux-arm64@1.3.0:
+    optional: true
+
+  sherif-linux-x64@1.3.0:
+    optional: true
+
+  sherif-windows-arm64@1.3.0:
+    optional: true
+
+  sherif-windows-x64@1.3.0:
+    optional: true
+
+  sherif@1.3.0:
+    optionalDependencies:
+      sherif-darwin-arm64: 1.3.0
+      sherif-darwin-x64: 1.3.0
+      sherif-linux-arm64: 1.3.0
+      sherif-linux-x64: 1.3.0
+      sherif-windows-arm64: 1.3.0
+      sherif-windows-x64: 1.3.0
 
   shiki@1.29.2:
     dependencies:
