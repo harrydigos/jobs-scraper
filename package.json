@@ -5,7 +5,7 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md}\" \"!**/.*/**\"",
     "tsc:check": "pnpm -r exec tsc --noEmit --project tsconfig.json --skipLibCheck --excludeDirectories node_modules,dist",
     "db:check": "turbo run db:check",
     "db:generate": "turbo run db:generate",
