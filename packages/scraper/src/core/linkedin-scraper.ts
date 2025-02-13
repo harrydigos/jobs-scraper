@@ -10,8 +10,8 @@ import {
   RELEVANCE,
   REMOTE,
   URL_PARAMS,
-} from '~/types/index.ts';
-import type { Job, NewJob } from 'database'; // TODO: create another type and dont use code from database
+} from '~/types/filters.ts';
+import type { Job } from '~/types/job.ts';
 
 const logger = createLogger({
   level: 'debug',
@@ -228,7 +228,7 @@ class LinkedInScraper {
     logger.info('Search jobs page');
 
     let processedJobs = 0;
-    const jobs: NewJob[] = [];
+    const jobs: Job[] = [];
 
     while (processedJobs < limit) {
       const loadedJobs = await this.#loadJobs();
@@ -300,7 +300,7 @@ class LinkedInScraper {
       throw new Error('Failed to load page');
     }
 
-    const jobs = new Map<string, NewJob>();
+    const jobs = new Map<string, Job>();
     const extractor = new JobDataExtractor(this.#page);
 
     for (const job of await extractor.getJobCards(limit)) {

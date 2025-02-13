@@ -126,9 +126,6 @@ importers:
       '@types/node':
         specifier: ^22.10.5
         version: 22.13.1
-      database:
-        specifier: workspace:*
-        version: link:../database
       tsup:
         specifier: ^8.3.6
         version: 8.3.6(jiti@2.4.2)(postcss@8.5.2)(tsx@4.19.2)(typescript@5.7.3)

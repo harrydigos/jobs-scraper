@@ -1,7 +1,7 @@
 import type { Page } from 'playwright';
 import { sanitizeText, createLogger } from '~/utils/index.ts';
 import { SELECTORS } from '~/constants/selectors.ts';
-import type { Job, NewJob } from 'database';
+import type { Job } from '~/types/job.ts';
 
 const logger = createLogger({
   level: 'debug',
@@ -147,7 +147,7 @@ export class JobDataExtractor {
     const results = await Promise.allSettled(Object.values(tasks).filter(Boolean));
 
     let resultIndex = 0;
-    const jobDetails: Partial<NewJob> = {};
+    const jobDetails: Partial<Job> = {};
 
     for (const key of Object.keys(tasks)) {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -192,6 +192,6 @@ export class JobDataExtractor {
       isReposted: jobDetails.timeSincePosted
         ? jobDetails.timeSincePosted.includes('Reposted')
         : undefined,
-    } satisfies Partial<NewJob>;
+    } satisfies Partial<Job>;
   }
 }
