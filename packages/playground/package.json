@@ -12,6 +12,7 @@
   "dependencies": {
     "csv-parse": "^5.6.0",
     "database": "workspace:*",
+    "playwright": "^1.49.1",
     "scraper": "workspace:*"
   },
   "devDependencies": {

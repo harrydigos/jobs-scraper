@@ -6,6 +6,10 @@ export default defineConfig({
   dts: true,
   splitting: false,
   clean: true,
-  minify: true,
+  minify: false,
   outDir: './dist',
+  sourcemap: false,
+  target: 'esnext',
+  platform: 'node',
+  treeshake: true,
 });

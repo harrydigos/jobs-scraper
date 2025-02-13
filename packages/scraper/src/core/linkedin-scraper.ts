@@ -11,7 +11,7 @@ import {
   REMOTE,
   URL_PARAMS,
 } from '~/types/index.ts';
-import type { Job, NewJob } from 'database';
+import type { Job, NewJob } from 'database'; // TODO: create another type and dont use code from database
 
 const logger = createLogger({
   level: 'debug',
