@@ -1,11 +1,9 @@
 import { db, jobs } from 'database';
-import { LinkedInScraper } from 'scraper';
+import { createScraper } from 'scraper';
 
 async function main() {
-  const scraper = new LinkedInScraper();
-
   try {
-    await scraper.initialize({ liAtCookie: process.env.LI_AT_COOKIE! });
+    const scraper = await createScraper({ liAtCookie: process.env.LI_AT_COOKIE! });
 
     const res = await scraper.searchJobs(
       {

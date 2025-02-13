@@ -23,6 +23,49 @@ const logger = createLogger({
 
 class LinkedInScraper {
   #page: Page | null = null;
+  #opts: { liAtCookie: string } = { liAtCookie: '' };
+
+  constructor(opts: { liAtCookie: string }) {
+    this.#opts = opts;
+  }
+
+  async _init() {
+    if (!this.#opts.liAtCookie) {
+      console.error('liAtCookie must be provided.');
+      process.exit(1);
+    }
+
+    logger.info('Connecting to a scraping browser');
+    const browser = await chromium.launch(browserDefaults);
+    logger.info('Connected, navigating...');
+
+    const ctx = await browser.newContext();
+
+    await ctx.addCookies([
+      {
+        name: 'li_at',
+        value: this.#opts.liAtCookie,
+        domain: '.linkedin.com',
+        path: '/',
+      },
+    ]);
+
+    logger.debug('Cookie added');
+
+    this.#page = await ctx.newPage();
+    await this.#page.goto(LI_URLS.home);
+
+    logger.debug('Home page');
+
+    if (!(await this.#isLoggedIn())) {
+      logger.error('Authentication failed. Please check your li_at cookie.');
+      throw new Error('Authentication failed. Please check your li_at cookie.');
+    }
+
+    logger.info('Successfully authenticated!');
+
+    return this;
+  }
 
   #constructUrl(filters: Filters) {
     const url = new URL(LI_URLS.jobsSearch);
@@ -105,42 +148,6 @@ class LinkedInScraper {
     } catch (e) {
       logger.error('Failed to accept cookies', e);
     }
-  }
-
-  async initialize({ liAtCookie }: { liAtCookie: string }) {
-    if (!liAtCookie) {
-      console.error('liAtCookie must be provided.');
-      process.exit(1);
-    }
-
-    logger.info('Connecting to a scraping browser');
-    const browser = await chromium.launch(browserDefaults);
-    logger.info('Connected, navigating...');
-
-    const ctx = await browser.newContext();
-
-    await ctx.addCookies([
-      {
-        name: 'li_at',
-        value: liAtCookie,
-        domain: '.linkedin.com',
-        path: '/',
-      },
-    ]);
-
-    logger.debug('Cookie added');
-
-    this.#page = await ctx.newPage();
-    await this.#page.goto(LI_URLS.home);
-
-    logger.debug('Home page');
-
-    if (!(await this.#isLoggedIn())) {
-      logger.error('Authentication failed. Please check your li_at cookie.');
-      throw new Error('Authentication failed. Please check your li_at cookie.');
-    }
-
-    logger.info('Successfully authenticated!');
   }
 
   async #waitForSkeletonsToBeRemoved() {
@@ -358,4 +365,7 @@ class LinkedInScraper {
   }
 }
 
-export { LinkedInScraper };
+export async function createScraper(opts: { liAtCookie: string }) {
+  const scraper = new LinkedInScraper(opts);
+  return await scraper._init();
+}
