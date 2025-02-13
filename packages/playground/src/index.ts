@@ -5,7 +5,7 @@ async function main() {
   try {
     const scraper = await createScraper({ liAtCookie: process.env.LI_AT_COOKIE! });
 
-    const res = await scraper.searchJobs(
+    await scraper.searchJobs(
       {
         keywords: 'software engineer',
         location: 'greece',
@@ -15,21 +15,24 @@ async function main() {
         datePosted: '1',
         jobType: ['fulltime'],
       },
-      50,
-      [],
-      ['description', 'applyLink', 'isReposted', 'skillsRequired', 'jobInsights'],
-    );
-
-    await db
-      .insert(jobs)
-      .values(res)
-      .onConflictDoUpdate({
-        target: jobs.id,
-        set: {
-          updatedAt: new Date().toISOString(),
-          timeSincePosted: jobs.timeSincePosted,
+      {
+        limit: 10,
+        excludeFields: ['description', 'applyLink', 'isReposted', 'skillsRequired', 'jobInsights'],
+        onScrape: async (job) => {
+          console.log('running on scrape', job);
+          await db
+            .insert(jobs)
+            .values(job)
+            .onConflictDoUpdate({
+              target: jobs.id,
+              set: {
+                updatedAt: new Date().toISOString(),
+                timeSincePosted: jobs.timeSincePosted,
+              },
+            });
         },
-      });
+      },
+    );
 
     await scraper.close();
   } catch (error) {

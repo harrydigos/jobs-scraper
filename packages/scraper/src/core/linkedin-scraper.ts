@@ -223,11 +223,19 @@ class LinkedInScraper {
     );
   }
 
-  async searchJobs(filters: Filters, limit = 25, ids?: string[], excludeFields?: (keyof Job)[]) {
+  async searchJobs(
+    filters: Filters,
+    opts?: {
+      onScrape?: (job: Job) => void;
+      limit?: number;
+      excludeFields?: (keyof Job)[];
+    },
+  ) {
     if (!this.#page) {
       logger.error('Scraper not initialized');
       throw new Error('Scraper not initialized');
     }
+    const limit = opts?.limit || 25;
 
     const searchUrl = this.#constructUrl(filters);
 
@@ -238,25 +246,26 @@ class LinkedInScraper {
     logger.info('Search jobs page');
 
     let processedJobs = 0;
-    const jobs: Job[] = [];
+    // const jobs: Job[] = [];
 
     while (processedJobs < limit) {
       const loadedJobs = await this.#loadJobs();
 
       if (!loadedJobs.success && loadedJobs.totalJobs === 0) {
         logger.warn('No jobs found on the current page');
-        return jobs;
+        // return jobs;
+        return;
       }
 
       logger.info(`Loaded ${loadedJobs.totalJobs} jobs`);
 
       const extractedJobs = await this.extractJobsData(
         limit - processedJobs,
-        ids || [],
-        excludeFields || [],
+        opts?.excludeFields || [],
+        opts?.onScrape,
       );
       processedJobs += extractedJobs.length;
-      jobs.push(...extractedJobs);
+      // jobs.push(...extractedJobs);
 
       if (processedJobs >= limit) {
         logger.info(`Job limit reached (${limit} jobs)`);
@@ -265,7 +274,7 @@ class LinkedInScraper {
 
       await this.#paginate();
     }
-    return jobs;
+    // return jobs;
   }
 
   async #loadJobDetails(jobId: string) {
@@ -304,7 +313,11 @@ class LinkedInScraper {
     );
   }
 
-  async extractJobsData(limit: number, ids: string[], excludeFields: (keyof Job)[]) {
+  async extractJobsData(
+    limit: number,
+    excludeFields: (keyof Job)[],
+    onScrape?: (job: Job) => void,
+  ) {
     if (!this.#page) {
       logger.error('Failed to load page');
       throw new Error('Failed to load page');
@@ -314,10 +327,6 @@ class LinkedInScraper {
     const extractor = new JobDataExtractor(this.#page);
 
     for (const job of await extractor.getJobCards(limit)) {
-      if (ids.includes(job.id)) {
-        logger.debug('Skipped job because it existed');
-        continue;
-      }
       try {
         await this.#page.locator(`div[data-job-id="${job.id}"]`).click();
         const loadedDetails = await this.#loadJobDetails(job.id);
@@ -335,13 +344,14 @@ class LinkedInScraper {
           location: sanitizeText(job.location),
           title: sanitizeText(job.title),
           ...extractedJobsData,
-        };
+        } satisfies Job;
 
         // check again here. TODO: maybe remove
         for (const field of excludeFields) {
           Reflect.deleteProperty(jobData, field);
         }
 
+        onScrape?.(jobData);
         jobs.set(job.id, jobData);
 
         await this.#page.waitForTimeout(getRandomArbitrary(500, 2500)); // to handle rate limiting. maybe remove/reduce
