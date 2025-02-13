@@ -225,8 +225,8 @@ class LinkedInScraper {
 
   async searchJobs(
     filters: Filters,
-    opts?: {
-      onScrape?: (job: Job) => void;
+    opts: {
+      onScrape: (job: Job) => void;
       limit?: number;
       excludeFields?: (keyof Job)[];
     },
@@ -246,26 +246,22 @@ class LinkedInScraper {
     logger.info('Search jobs page');
 
     let processedJobs = 0;
-    // const jobs: Job[] = [];
 
     while (processedJobs < limit) {
       const loadedJobs = await this.#loadJobs();
 
       if (!loadedJobs.success && loadedJobs.totalJobs === 0) {
         logger.warn('No jobs found on the current page');
-        // return jobs;
         return;
       }
 
       logger.info(`Loaded ${loadedJobs.totalJobs} jobs`);
 
-      const extractedJobs = await this.extractJobsData(
+      processedJobs += await this.#extractJobsData(
         limit - processedJobs,
-        opts?.excludeFields || [],
-        opts?.onScrape,
+        opts.excludeFields || [],
+        opts.onScrape,
       );
-      processedJobs += extractedJobs.length;
-      // jobs.push(...extractedJobs);
 
       if (processedJobs >= limit) {
         logger.info(`Job limit reached (${limit} jobs)`);
@@ -274,7 +270,6 @@ class LinkedInScraper {
 
       await this.#paginate();
     }
-    // return jobs;
   }
 
   async #loadJobDetails(jobId: string) {
@@ -313,17 +308,17 @@ class LinkedInScraper {
     );
   }
 
-  async extractJobsData(
+  async #extractJobsData(
     limit: number,
     excludeFields: (keyof Job)[],
-    onScrape?: (job: Job) => void,
+    onScrape: (job: Job) => void,
   ) {
     if (!this.#page) {
       logger.error('Failed to load page');
       throw new Error('Failed to load page');
     }
 
-    const jobs = new Map<string, Job>();
+    let jobCount = 0;
     const extractor = new JobDataExtractor(this.#page);
 
     for (const job of await extractor.getJobCards(limit)) {
@@ -351,8 +346,8 @@ class LinkedInScraper {
           Reflect.deleteProperty(jobData, field);
         }
 
-        onScrape?.(jobData);
-        jobs.set(job.id, jobData);
+        onScrape(jobData);
+        jobCount++;
 
         await this.#page.waitForTimeout(getRandomArbitrary(500, 2500)); // to handle rate limiting. maybe remove/reduce
         // await this.#page.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
@@ -362,8 +357,8 @@ class LinkedInScraper {
       }
     }
 
-    logger.info(`Extracted ${jobs.size} jobs`);
-    return Array.from(jobs.values());
+    logger.info(`Extracted ${jobCount} jobs`);
+    return jobCount;
   }
 
   async close() {

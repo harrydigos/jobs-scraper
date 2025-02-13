@@ -16,10 +16,9 @@ async function main() {
         jobType: ['fulltime'],
       },
       {
-        limit: 10,
+        limit: 100,
         excludeFields: ['description', 'applyLink', 'isReposted', 'skillsRequired', 'jobInsights'],
         onScrape: async (job) => {
-          console.log('running on scrape', job);
           await db
             .insert(jobs)
             .values(job)
