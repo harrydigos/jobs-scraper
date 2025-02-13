@@ -25,5 +25,3 @@ export const browserDefaults = {
   slowMo: 50,
   // timeout: 30000,
 } satisfies LaunchOptions;
-
-export * from './selectors.ts';

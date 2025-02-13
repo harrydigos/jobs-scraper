@@ -7,21 +7,21 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 type Transport = 'console' | 'file';
 type LogMeta = Record<string, unknown> | Error | unknown | undefined;
 
-type LoggerConfig = {
+export type LoggerConfig = {
   level?: LogLevel;
   transports?: Transport[];
   filePath?: string;
   maxFileSize?: number;
 };
 
-const LOG_LEVELS: Record<LogLevel, number> = {
+export const LOG_LEVELS: Record<LogLevel, number> = {
   debug: 0,
   info: 1,
   warn: 2,
   error: 3,
 };
 
-const LOG_EMOJIS = {
+export const LOG_EMOJIS = {
   debug: '🐛',
   info: 'ℹ️',
   warn: '⚠️',

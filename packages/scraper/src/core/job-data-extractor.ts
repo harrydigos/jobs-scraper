@@ -1,7 +1,8 @@
 import type { Page } from 'playwright';
-import { sanitizeText, createLogger } from '~/utils/index.ts';
 import { SELECTORS } from '~/constants/selectors.ts';
 import type { Job } from '~/types/job.ts';
+import { createLogger } from '~/utils/logger.ts';
+import { sanitizeText } from '~/utils/utils.ts';
 
 const logger = createLogger({
   level: 'debug',
