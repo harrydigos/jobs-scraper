@@ -1,5 +1,6 @@
 import type { Page } from 'playwright';
 import { SELECTORS } from '~/constants/selectors.ts';
+import type { OptionalFieldsOnly } from '~/types/generics.ts';
 import type { Job } from '~/types/job.ts';
 import { createLogger } from '~/utils/logger.ts';
 import { sanitizeText } from '~/utils/utils.ts';
@@ -134,7 +135,7 @@ export class JobDataExtractor {
     }
   }
 
-  async #getJobDetails(excludeFields: Set<keyof Job> = new Set()) {
+  async #getJobDetails(excludeFields: Set<keyof OptionalFieldsOnly<Job>> = new Set()) {
     const tasks = {
       description: excludeFields.has('description') ? undefined : this.getDescription(),
       timeSincePosted: excludeFields.has('timeSincePosted') ? undefined : this.getTimeSincePosted(),
@@ -167,7 +168,7 @@ export class JobDataExtractor {
     return jobDetails;
   }
 
-  async extractJobDetails(opts?: { excludeFields?: (keyof Job)[] }) {
+  async extractJobDetails(opts?: { excludeFields: Array<keyof OptionalFieldsOnly<Job>> }) {
     const excludeFields = new Set(opts?.excludeFields || []);
 
     if (excludeFields.size) {

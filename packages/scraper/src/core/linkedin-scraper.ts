@@ -15,6 +15,7 @@ import { browserDefaults, LI_URLS } from '~/constants/browser.ts';
 import { getRandomArbitrary, sanitizeText, sleep } from '~/utils/utils.ts';
 import { retry } from '~/utils/retry.ts';
 import { createLogger } from '~/utils/logger.ts';
+import type { OptionalFieldsOnly } from '~/types/generics.ts';
 
 const logger = createLogger({
   level: 'debug',
@@ -228,7 +229,7 @@ class LinkedInScraper {
     opts: {
       onScrape: (job: Job) => void;
       limit?: number;
-      excludeFields?: (keyof Job)[];
+      excludeFields?: Array<keyof OptionalFieldsOnly<Job>>;
     },
   ) {
     if (!this.#page) {
@@ -310,7 +311,7 @@ class LinkedInScraper {
 
   async #extractJobsData(
     limit: number,
-    excludeFields: (keyof Job)[],
+    excludeFields: Array<keyof OptionalFieldsOnly<Job>>,
     onScrape: (job: Job) => void,
   ) {
     if (!this.#page) {
@@ -340,11 +341,6 @@ class LinkedInScraper {
           title: sanitizeText(job.title),
           ...extractedJobsData,
         } satisfies Job;
-
-        // check again here. TODO: maybe remove
-        for (const field of excludeFields) {
-          Reflect.deleteProperty(jobData, field);
-        }
 
         onScrape(jobData);
         jobCount++;
