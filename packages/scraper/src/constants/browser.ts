@@ -8,7 +8,7 @@ export const LI_URLS = {
 } as const;
 
 export const browserDefaults = {
-  headless: true,
+  headless: false,
   args: [
     '--no-sandbox',
     '--disable-setuid-sandbox',

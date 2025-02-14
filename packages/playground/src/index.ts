@@ -1,24 +1,35 @@
 import { db, jobs } from 'database';
-import { createScraper } from 'scraper';
+import { createScraper, Job } from 'scraper';
 
 async function main() {
   try {
     const scraper = await createScraper({ liAtCookie: process.env.LI_AT_COOKIE! });
 
     await scraper.searchJobs(
+      [
+        {
+          keywords: 'software engineer',
+          location: 'greece',
+          relevance: 'recent',
+          remote: ['remote', 'hybrid'],
+          experience: ['mid-senior'],
+          datePosted: '1',
+          jobType: ['fulltime'],
+        },
+        {
+          keywords: 'frontend engineer',
+          location: 'greece',
+          relevance: 'recent',
+          remote: ['remote', 'hybrid'],
+          experience: ['mid-senior'],
+          datePosted: '1',
+          jobType: ['fulltime'],
+        },
+      ],
       {
-        keywords: 'software engineer',
-        location: 'greece',
-        relevance: 'recent',
-        remote: ['remote', 'hybrid'],
-        experience: ['mid-senior'],
-        datePosted: '1',
-        jobType: ['fulltime'],
-      },
-      {
-        limit: 100,
+        limit: 10,
         excludeFields: ['description', 'applyLink', 'isReposted', 'skillsRequired', 'jobInsights'],
-        onScrape: async (job) => {
+        onScrape: async (job: Job) => {
           await db
             .insert(jobs)
             .values(job)
