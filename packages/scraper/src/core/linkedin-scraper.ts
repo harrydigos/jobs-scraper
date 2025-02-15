@@ -321,7 +321,7 @@ export class LinkedInScraper {
         onScrape(jobData);
         jobCount++;
 
-        await this.#page.waitForTimeout(getRandomArbitrary(1000, 2500));
+        await this.#page.waitForTimeout(getRandomArbitrary(1500, 4000));
       } catch (e) {
         logger.error(`Failed to process job ${job.id}`, e);
         continue;
@@ -410,6 +410,8 @@ export class LinkedInScraper {
       );
 
       const searchPromises = filtersChunk.map(async (filterSet, indexInChunk) => {
+        await sleep(getRandomArbitrary(2000, 5000));
+
         const searchIndex = chunkIndex * maxConcurrent + indexInChunk;
         const scraper = await LinkedInScraper.initialize(this.#opts);
 

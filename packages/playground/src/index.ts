@@ -1,13 +1,30 @@
-// import { db, jobs } from 'database';
-// import { createScraper } from 'scraper';
+import { db, jobs } from 'database';
+import { Job, LinkedInScraper } from 'scraper';
 
-import { LinkedInScraper } from 'scraper';
+function getJobIds() {
+  return db.select({ id: jobs.id }).from(jobs);
+}
+
+async function createJob(job: Job) {
+  return await db
+    .insert(jobs)
+    .values(job)
+    .onConflictDoUpdate({
+      target: jobs.id,
+      set: {
+        updatedAt: new Date().toISOString(),
+        timeSincePosted: jobs.timeSincePosted,
+      },
+    });
+}
 
 async function main() {
+  const jobIds = await getJobIds().then((jobs) => jobs.map((j) => j.id));
+
   try {
-    // const scraper = await createScraper({ liAtCookie: process.env.LI_AT_COOKIE! });
     const scraper = await LinkedInScraper.initialize({
       liAtCookie: process.env.LI_AT_COOKIE!,
+      scrapedJobIds: jobIds,
     });
 
     await scraper.searchJobs(
@@ -18,7 +35,7 @@ async function main() {
           relevance: 'recent',
           remote: ['remote', 'hybrid'],
           experience: ['mid-senior'],
-          datePosted: '1',
+          datePosted: '7',
           jobType: ['fulltime'],
         },
         {
@@ -27,35 +44,67 @@ async function main() {
           relevance: 'recent',
           remote: ['remote', 'hybrid'],
           experience: ['mid-senior'],
-          datePosted: '1',
+          datePosted: '7',
+          jobType: ['fulltime'],
+        },
+        {
+          keywords: 'full stack engineer',
+          location: 'greece',
+          relevance: 'recent',
+          remote: ['remote', 'hybrid'],
+          experience: ['mid-senior'],
+          datePosted: '7',
           jobType: ['fulltime'],
         },
         {
           keywords: 'frontend engineer',
-          location: 'Europe',
+          location: 'European Union',
           relevance: 'recent',
           remote: ['remote'],
-          experience: ['mid-senior'],
+          experience: ['mid-senior', 'associate', 'entry'],
+          jobType: ['fulltime'],
+        },
+        {
+          keywords: 'full stack engineer',
+          location: 'European Union',
+          relevance: 'recent',
+          remote: ['remote'],
+          experience: ['mid-senior', 'associate', 'entry'],
+          jobType: ['fulltime'],
+        },
+        {
+          keywords: 'frontend engineer',
+          location: 'EMEA',
+          relevance: 'recent',
+          remote: ['remote'],
+          experience: ['mid-senior', 'associate', 'entry'],
+          jobType: ['fulltime'],
+        },
+        {
+          keywords: 'full stack engineer',
+          location: 'EMEA',
+          relevance: 'recent',
+          remote: ['remote'],
+          experience: ['mid-senior', 'associate', 'entry'],
           jobType: ['fulltime'],
         },
       ],
       {
-        limit: 3,
-        excludeFields: ['description', 'applyLink', 'isReposted', 'skillsRequired', 'jobInsights'],
+        limit: 300,
+        excludeFields: [
+          'description',
+          'applyLink',
+          'isReposted',
+          'skillsRequired',
+          'jobInsights',
+          'companyImgLink',
+          'jobInsights',
+          'skillsRequired',
+        ],
+        maxConcurrent: 3,
         onScrape: async (job) => {
-          console.log('Scraped job', job.id);
-          // await db
-          //   .insert(jobs)
-          //   .values(job)
-          //   .onConflictDoUpdate({
-          //     target: jobs.id,
-          //     set: {
-          //       updatedAt: new Date().toISOString(),
-          //       timeSincePosted: jobs.timeSincePosted,
-          //     },
-          //   });
+          await createJob(job);
         },
-        maxConcurrent: 2,
       },
     );
 
