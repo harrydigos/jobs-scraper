@@ -97,38 +97,29 @@ export class JobDataExtractor {
     }
   }
 
-  async getJobCards(limit: number) {
-    logger.debug('Extracting job cards', { limit });
+  async getJobCards() {
+    logger.debug('Extracting job cards');
     try {
-      return await this.page.evaluate(
-        ({ selectors, limit }) => {
-          return Array.from(document.querySelectorAll(selectors.jobs))
-            .slice(0, Math.min(limit, 25))
-            .map((job) => {
-              const meta = (job.querySelector(selectors.cardMetadata)?.textContent || '').split(
-                '(',
-              );
-              const link = new URL(
-                job.querySelector<HTMLAnchorElement>(selectors.jobLink)?.href || '',
-              );
-              link.search = '';
+      return await this.page.evaluate((selectors) => {
+        return Array.from(document.querySelectorAll(selectors.jobs)).map((job) => {
+          const meta = (job.querySelector(selectors.cardMetadata)?.textContent || '').split('(');
+          const link = new URL(job.querySelector<HTMLAnchorElement>(selectors.jobLink)?.href || '');
+          link.search = '';
 
-              return {
-                id: job.getAttribute('data-job-id') || '',
-                title: job.querySelector(selectors.jobTitle)?.textContent || '',
-                link: link.toString(),
-                company: job.querySelector(selectors.company)?.textContent || '',
-                companyImgLink: job.querySelector('img')?.getAttribute('src') || '',
-                isPromoted: Array.from(job.querySelectorAll('li')).some(
-                  (item) => item.textContent?.trim() === 'Promoted',
-                ),
-                location: meta?.[0] || '',
-                remote: meta?.[1]?.replace(')', '') || '',
-              };
-            });
-        },
-        { selectors: SELECTORS, limit },
-      );
+          return {
+            id: job.getAttribute('data-job-id') || '',
+            title: job.querySelector(selectors.jobTitle)?.textContent || '',
+            link: link.toString(),
+            company: job.querySelector(selectors.company)?.textContent || '',
+            companyImgLink: job.querySelector('img')?.getAttribute('src') || '',
+            isPromoted: Array.from(job.querySelectorAll('li')).some(
+              (item) => item.textContent?.trim() === 'Promoted',
+            ),
+            location: meta?.[0] || '',
+            remote: meta?.[1]?.replace(')', '') || '',
+          };
+        });
+      }, SELECTORS);
     } catch (error) {
       logger.error('Failed to extract job cards', error);
       return [];

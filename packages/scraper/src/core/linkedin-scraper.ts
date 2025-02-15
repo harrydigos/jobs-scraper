@@ -22,16 +22,21 @@ const logger = createLogger({
   transports: ['console', 'file'],
 });
 
+const scrapedJobIds: Set<string> = new Set();
+
 export class LinkedInScraper {
   #browser: Browser | null = null;
   #page: Page | null = null;
   #opts: { liAtCookie: string } = { liAtCookie: '' };
 
-  private constructor(opts: { liAtCookie: string }) {
-    this.#opts = opts;
+  private constructor(opts: { liAtCookie: string; scrapedJobIds?: Array<string> }) {
+    this.#opts = { liAtCookie: opts.liAtCookie };
+    opts.scrapedJobIds?.forEach((id) => {
+      scrapedJobIds.add(id);
+    });
   }
 
-  static async initialize(opts: { liAtCookie: string }) {
+  static async initialize(opts: { liAtCookie: string; scrapedJobIds?: Array<string> }) {
     const scraper = new LinkedInScraper(opts);
 
     // Private names are shared between all instances of a given class
@@ -278,8 +283,19 @@ export class LinkedInScraper {
     let jobCount = 0;
     const extractor = new JobDataExtractor(this.#page);
 
-    for (const job of await extractor.getJobCards(limit)) {
+    for (const job of await extractor.getJobCards()) {
+      if (jobCount === limit) {
+        logger.info(`Extracted ${jobCount} jobs`);
+        return jobCount;
+      }
+
       try {
+        // Avoid scraping job if it's already scraped
+        if (scrapedJobIds.has(job.id)) {
+          logger.info(`Job id: ${job.id} is already scraped. Skipping...`);
+          continue;
+        }
+
         await this.#page.locator(`div[data-job-id="${job.id}"]`).click();
         const loadedDetails = await this.#loadJobDetails(job.id);
 
@@ -287,6 +303,10 @@ export class LinkedInScraper {
           logger.warn('Failed to load job details', { jobId: job.id });
           continue;
         }
+
+        // Store the ID of the successfully scraped job asap to ensure
+        // that concurrent scrapers won't attempt to scrape it again.
+        scrapedJobIds.add(job.id);
 
         const extractedJobsData = await extractor.extractJobDetails({ excludeFields });
         const jobData = {
@@ -301,8 +321,7 @@ export class LinkedInScraper {
         onScrape(jobData);
         jobCount++;
 
-        await this.#page.waitForTimeout(getRandomArbitrary(500, 2500)); // to handle rate limiting. maybe remove/reduce
-        // await this.#page.waitForTimeout(getRandomArbitrary(100, 300)); // to handle rate limiting. maybe remove/reduce
+        await this.#page.waitForTimeout(getRandomArbitrary(1000, 2500));
       } catch (e) {
         logger.error(`Failed to process job ${job.id}`, e);
         continue;
