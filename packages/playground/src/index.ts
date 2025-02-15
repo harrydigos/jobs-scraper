@@ -1,5 +1,5 @@
-import { db, jobs } from 'database';
-import { createScraper, Job } from 'scraper';
+// import { db, jobs } from 'database';
+import { createScraper } from 'scraper';
 
 async function main() {
   try {
@@ -25,22 +25,32 @@ async function main() {
           datePosted: '1',
           jobType: ['fulltime'],
         },
+        {
+          keywords: 'frontend engineer',
+          location: 'Europe',
+          relevance: 'recent',
+          remote: ['remote'],
+          experience: ['mid-senior'],
+          jobType: ['fulltime'],
+        },
       ],
       {
-        limit: 10,
+        limit: 3,
         excludeFields: ['description', 'applyLink', 'isReposted', 'skillsRequired', 'jobInsights'],
-        onScrape: async (job: Job) => {
-          await db
-            .insert(jobs)
-            .values(job)
-            .onConflictDoUpdate({
-              target: jobs.id,
-              set: {
-                updatedAt: new Date().toISOString(),
-                timeSincePosted: jobs.timeSincePosted,
-              },
-            });
+        onScrape: async (job) => {
+          console.log('Scraped job', job.id);
+          // await db
+          //   .insert(jobs)
+          //   .values(job)
+          //   .onConflictDoUpdate({
+          //     target: jobs.id,
+          //     set: {
+          //       updatedAt: new Date().toISOString(),
+          //       timeSincePosted: jobs.timeSincePosted,
+          //     },
+          //   });
         },
+        maxConcurrent: 2,
       },
     );
 
