@@ -1,9 +1,9 @@
 import type { Page } from 'playwright';
-import { SELECTORS } from '~/constants/selectors.ts';
-import type { OptionalFieldsOnly } from '~/types/generics.ts';
-import type { Job } from '~/types/job.ts';
-import { createLogger } from '~/utils/logger.ts';
-import { sanitizeText } from '~/utils/utils.ts';
+import { SELECTORS } from '~/constants/selectors';
+import type { OptionalFieldsOnly } from '~/types/generics';
+import type { Job } from '~/types/job';
+import { createLogger } from '~/utils/logger';
+import { sanitizeText } from '~/utils/utils';
 
 const logger = createLogger({
   level: 'debug',

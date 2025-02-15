@@ -1,5 +1,5 @@
 import { chromium, type Browser, type Page } from 'playwright';
-import { JobDataExtractor } from '~/core/job-data-extractor.ts';
+import { JobDataExtractor } from '~/core/job-data-extractor';
 import {
   DATE_POSTED,
   EXPERIENCE,
@@ -8,14 +8,14 @@ import {
   RELEVANCE,
   REMOTE,
   URL_PARAMS,
-} from '~/types/filters.ts';
-import type { Job } from '~/types/job.ts';
-import { SELECTORS } from '~/constants/selectors.ts';
-import { browserDefaults, LI_URLS } from '~/constants/browser.ts';
-import { chunkArray, getRandomArbitrary, sanitizeText, sleep } from '~/utils/utils.ts';
-import { retry } from '~/utils/retry.ts';
-import { createLogger } from '~/utils/logger.ts';
-import type { OptionalFieldsOnly } from '~/types/generics.ts';
+} from '~/types/filters';
+import type { Job } from '~/types/job';
+import { SELECTORS } from '~/constants/selectors';
+import { browserDefaults, LI_URLS } from '~/constants/browser';
+import { chunkArray, getRandomArbitrary, sanitizeText, sleep } from '~/utils/utils';
+import { retry } from '~/utils/retry';
+import { createLogger } from '~/utils/logger';
+import type { OptionalFieldsOnly } from '~/types/generics';
 
 const logger = createLogger({
   level: 'debug',
