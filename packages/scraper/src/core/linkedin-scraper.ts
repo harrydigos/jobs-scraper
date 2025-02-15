@@ -22,32 +22,35 @@ const logger = createLogger({
   transports: ['console', 'file'],
 });
 
-class LinkedInScraper {
+export class LinkedInScraper {
   #browser: Browser | null = null;
   #page: Page | null = null;
   #opts: { liAtCookie: string } = { liAtCookie: '' };
 
-  constructor(opts: { liAtCookie: string }) {
+  private constructor(opts: { liAtCookie: string }) {
     this.#opts = opts;
   }
 
-  async _init() {
-    if (!this.#opts.liAtCookie) {
+  static async initialize(opts: { liAtCookie: string }) {
+    const scraper = new LinkedInScraper(opts);
+
+    // Private names are shared between all instances of a given class
+    if (!scraper.#opts.liAtCookie) {
       console.error('liAtCookie must be provided.');
       process.exit(1);
     }
 
     logger.info('Connecting to a scraping browser');
-    this.#browser = await chromium.launch(browserDefaults);
+    scraper.#browser = await chromium.launch(browserDefaults);
 
     logger.info('Connected, navigating...');
 
-    const ctx = await this.#browser.newContext();
+    const ctx = await scraper.#browser.newContext();
 
     await ctx.addCookies([
       {
         name: 'li_at',
-        value: this.#opts.liAtCookie,
+        value: scraper.#opts.liAtCookie,
         domain: '.linkedin.com',
         path: '/',
       },
@@ -55,19 +58,19 @@ class LinkedInScraper {
 
     logger.debug('Cookie added');
 
-    this.#page = await ctx.newPage();
-    await this.#page.goto(LI_URLS.home);
+    scraper.#page = await ctx.newPage();
+    await scraper.#page.goto(LI_URLS.home);
 
     logger.debug('Home page');
 
-    if (!(await this.#isLoggedIn())) {
+    if (!(await scraper.#isLoggedIn())) {
       logger.error('Authentication failed. Please check your li_at cookie.');
       throw new Error('Authentication failed. Please check your li_at cookie.');
     }
 
     logger.info('Successfully authenticated!');
 
-    return this;
+    return scraper;
   }
 
   #constructUrl(filters: Filters) {
@@ -310,61 +313,6 @@ class LinkedInScraper {
     return jobCount;
   }
 
-  async searchJobs(
-    filters: Filters | Filters[],
-    opts: {
-      onScrape: (job: Job, searchIndex?: number) => void;
-      limit?: number;
-      excludeFields?: Array<keyof OptionalFieldsOnly<Job>>;
-      maxConcurrent?: number;
-    },
-  ) {
-    const searchFilters = Array.isArray(filters) ? filters : [filters];
-    const maxConcurrent = opts.maxConcurrent || 3;
-
-    if (searchFilters.length === 1) {
-      return this.#singleSearch(searchFilters[0], opts);
-    }
-
-    if (!this.#browser) {
-      logger.error('Scraper not initialized');
-      throw new Error('Scraper not initialized');
-    }
-
-    const chunks = chunkArray(searchFilters, maxConcurrent);
-
-    for (const [chunkIndex, filtersChunk] of chunks.entries()) {
-      logger.info(
-        `Processing chunk ${chunkIndex + 1}/${chunks.length} (${filtersChunk.length} searches)`,
-      );
-
-      const searchPromises = filtersChunk.map(async (filterSet, indexInChunk) => {
-        const searchIndex = chunkIndex * maxConcurrent + indexInChunk;
-        const scraper = await createScraper(this.#opts);
-
-        try {
-          // Private names are shared between all instances of a given class
-          await scraper.#singleSearch(filterSet, {
-            ...opts,
-            onScrape: (job) => opts.onScrape(job, searchIndex),
-          });
-        } catch (error) {
-          logger.error(`Error in search ${searchIndex}:`, error);
-        } finally {
-          await scraper
-            .close()
-            .catch((e) => logger.error(`Error closing context for search ${searchIndex}:`, e));
-        }
-      });
-
-      await Promise.allSettled(searchPromises);
-
-      if (chunkIndex < chunks.length - 1) {
-        await sleep(getRandomArbitrary(2000, 5000));
-      }
-    }
-  }
-
   async #singleSearch(
     filters: Filters,
     opts: {
@@ -414,6 +362,60 @@ class LinkedInScraper {
     }
   }
 
+  async searchJobs(
+    filters: Filters | Filters[],
+    opts: {
+      onScrape: (job: Job, searchIndex?: number) => void;
+      limit?: number;
+      excludeFields?: Array<keyof OptionalFieldsOnly<Job>>;
+      maxConcurrent?: number;
+    },
+  ) {
+    const searchFilters = Array.isArray(filters) ? filters : [filters];
+    const maxConcurrent = opts.maxConcurrent || 3;
+
+    if (searchFilters.length === 1) {
+      return this.#singleSearch(searchFilters[0], opts);
+    }
+
+    if (!this.#browser) {
+      logger.error('Scraper not initialized');
+      throw new Error('Scraper not initialized');
+    }
+
+    const chunks = chunkArray(searchFilters, maxConcurrent);
+
+    for (const [chunkIndex, filtersChunk] of chunks.entries()) {
+      logger.info(
+        `Processing chunk ${chunkIndex + 1}/${chunks.length} (${filtersChunk.length} searches)`,
+      );
+
+      const searchPromises = filtersChunk.map(async (filterSet, indexInChunk) => {
+        const searchIndex = chunkIndex * maxConcurrent + indexInChunk;
+        const scraper = await LinkedInScraper.initialize(this.#opts);
+
+        try {
+          await scraper.#singleSearch(filterSet, {
+            ...opts,
+            onScrape: (job) => opts.onScrape(job, searchIndex),
+          });
+        } catch (error) {
+          logger.error(`Error in search ${searchIndex}:`, error);
+        } finally {
+          await scraper
+            .close()
+            .catch((e) => logger.error(`Error closing context for search ${searchIndex}:`, e));
+        }
+      });
+
+      await Promise.allSettled(searchPromises);
+
+      if (chunkIndex < chunks.length - 1) {
+        await sleep(getRandomArbitrary(2000, 5000));
+      }
+    }
+  }
+
   async close() {
     if (this.#page) {
       await this.#page.context().browser()?.close();
@@ -421,9 +423,4 @@ class LinkedInScraper {
       logger.info('Scraper closed successfully');
     }
   }
-}
-
-export async function createScraper(opts: { liAtCookie: string }) {
-  const scraper = new LinkedInScraper(opts);
-  return await scraper._init();
 }
