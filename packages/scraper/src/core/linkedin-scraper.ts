@@ -294,7 +294,7 @@ export class LinkedInScraper {
           company: sanitizeText(job.company),
           remote: sanitizeText(job.remote),
           location: sanitizeText(job.location),
-          title: sanitizeText(job.title),
+          title: sanitizeText(job.title.replace(/with verification/i, '')),
           ...extractedJobsData,
         } satisfies Job;
 
