@@ -3,11 +3,13 @@ import { createAsync, query, useSearchParams } from '@solidjs/router';
 import { ColumnDef, createSolidTable, flexRender, getCoreRowModel } from '@tanstack/solid-table';
 import { and, between, db, desc, getAllJobsCount, Job, jobs, like, or } from 'database';
 import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
+import { z } from 'zod';
+
+const urlSchema = z.string().url();
 
 const getJobs = query(async (search = '', startDate = '', endDate = '') => {
   'use server';
   search = `%${search.toLowerCase()}%`;
-  console.log({ search, startDate, endDate });
   const query = db
     .select()
     .from(jobs)
@@ -74,10 +76,10 @@ const defaultColumns: ColumnDef<Job>[] = [
     accessorKey: 'link',
     header: () => 'Link',
     cell: (info) => {
-      const value = info.getValue<string>();
+      const validationResult = urlSchema.safeParse(info.getValue());
       return (
-        <Show when={value?.startsWith('https://')} fallback="-">
-          <a href={value} target="_blank">
+        <Show when={validationResult.success} fallback="-">
+          <a href={validationResult.data} target="_blank" rel="noopener noreferrer">
             Link
           </a>
         </Show>
@@ -98,7 +100,7 @@ const JobTable = () => {
         startDate: (searchParams.startDate as string) || '',
         endDate: (searchParams.endDate as string) || '',
       }),
-    500,
+    1000,
   );
 
   const [search, setSearch] = createSignal((searchParams.search as string) || '');
