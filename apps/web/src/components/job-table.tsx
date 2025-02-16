@@ -1,27 +1,37 @@
 import { leadingAndTrailing, throttle } from '@solid-primitives/scheduled';
-import { createAsync, query, RouteDefinition, useSearchParams } from '@solidjs/router';
+import { createAsync, query, useSearchParams } from '@solidjs/router';
 import { ColumnDef, createSolidTable, flexRender, getCoreRowModel } from '@tanstack/solid-table';
-import { db, desc, getAllJobsCount, Job, jobs, like, or } from 'database';
+import { and, between, db, desc, getAllJobsCount, Job, jobs, like, or } from 'database';
 import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
 
-const getJobs = query(async (search = '') => {
+const getJobs = query(async (search = '', startDate = '', endDate = '') => {
   'use server';
   search = `%${search.toLowerCase()}%`;
-  return await db
+  console.log({ search, startDate, endDate });
+  const query = db
     .select()
     .from(jobs)
-    .where(or(like(jobs.title, search), or(like(jobs.company, search))))
-    .orderBy(desc(jobs.createdAt));
+    .where(
+      and(
+        or(like(jobs.title, search), like(jobs.company, search)),
+        startDate || endDate
+          ? between(
+              jobs.updatedAt,
+              startDate || new Date(1970, 1).toISOString(),
+              endDate ||
+                new Date(new Date().setFullYear(new Date().getFullYear() + 100)).toISOString(), // 100 years ok lol
+            )
+          : undefined,
+      ),
+    );
+
+  return await query.orderBy(desc(jobs.createdAt));
 }, 'jobs');
 
 const totalJobs = query(async () => {
   'use server';
   return await getAllJobsCount();
 }, 'jobs-count');
-
-export const route = {
-  preload: () => getJobs(),
-} satisfies RouteDefinition;
 
 const defaultColumns: ColumnDef<Job>[] = [
   {
@@ -78,20 +88,36 @@ const defaultColumns: ColumnDef<Job>[] = [
 
 const JobTable = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // TODO: validate url
   const throttledSearch = leadingAndTrailing(
     throttle,
-    (search: string) => setSearchParams({ search: search.trim() }, { replace: true }),
+    (search: string) =>
+      setSearchParams({
+        search: search.trim(),
+        startDate: (searchParams.startDate as string) || '',
+        endDate: (searchParams.endDate as string) || '',
+      }),
     500,
   );
-  const [search, setSearch] = createSignal(searchParams.search || '');
+
+  const [search, setSearch] = createSignal((searchParams.search as string) || '');
 
   const tableData = createAsync(async () => {
     return (
-      (await getJobs(Array.isArray(searchParams?.search) ? '' : searchParams.search || '')) || []
+      (await getJobs(
+        Array.isArray(searchParams?.search) ? '' : searchParams.search || '',
+        Array.isArray(searchParams?.startDate) || !searchParams?.startDate
+          ? ''
+          : new Date(searchParams.startDate).toISOString(),
+        Array.isArray(searchParams?.endDate) || !searchParams?.endDate
+          ? ''
+          : new Date(searchParams.endDate).toISOString(),
+      )) || []
     );
   });
 
-  const jobCount = createAsync(() => totalJobs());
+  const totalJobsCount = createAsync(() => totalJobs());
 
   const table = createSolidTable({
     get data() {
@@ -99,7 +125,6 @@ const JobTable = () => {
     },
     columns: defaultColumns,
     getCoreRowModel: getCoreRowModel(),
-    rowCount: jobCount()?.[0].count || 0,
   });
 
   let searchInputRef: HTMLInputElement | undefined;
@@ -140,9 +165,42 @@ const JobTable = () => {
             ⌘K
           </div>
         </div>
+        <input
+          type="date"
+          value={(searchParams.startDate as string) || ''}
+          onInput={(e) =>
+            setSearchParams({
+              search: search(),
+              startDate: e.target.value,
+              endDate: (searchParams.endDate as string) || '',
+            })
+          }
+          class="px-4 py-2 border border-gray-200 rounded-md text-sm"
+        />
+        <input
+          type="date"
+          value={(searchParams.endDate as string) || ''}
+          onInput={(e) =>
+            setSearchParams({
+              search: search(),
+              startDate: (searchParams.startDate as string) || '',
+              endDate: e.target.value,
+            })
+          }
+          class="px-4 py-2 border border-gray-200 rounded-md text-sm"
+        />
+
+        <button
+          type="button"
+          onClick={() => setSearchParams({ search: search(), startDate: '', endDate: '' })}
+        >
+          Clear
+        </button>
 
         <div class="overflow-x-auto rounded-lg border border-gray-200">
-          <div class="mt-4 text-sm text-gray-500">Total jobs: {table.getRowCount()}</div>
+          <div class="mt-4 text-sm text-gray-500">
+            Showing {table.getRowCount()} of total {totalJobsCount()?.[0].count || 0}
+          </div>
           <table class="w-full">
             <thead>
               <tr class="bg-gray-50">
