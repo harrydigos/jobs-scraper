@@ -392,7 +392,9 @@ export class LinkedInScraper {
     }
   }
 
-  async searchJobs(filters: Filters | Filters[], opts: SearchOptions) {
+  async searchJobs(filters: Filters[], opts: SearchOptions): Promise<void>;
+  async searchJobs(filters: Filters, opts: Omit<SearchOptions, 'maxConcurrent'>): Promise<void>;
+  async searchJobs(filters: Filters | Filters[], opts: SearchOptions): Promise<void> {
     this.#searchOptions = { ...this.#searchOptions, ...opts };
 
     if (!this.#browser) {
