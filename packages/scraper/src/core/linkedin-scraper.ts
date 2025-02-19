@@ -443,9 +443,15 @@ export class LinkedInScraper {
       nextSearch(processSearch);
     }
 
-    while (this.#activeSearches.size > 0 || searchQueue.length > 0) {
-      await sleep(1000);
-    }
+    // wait until completion
+    await new Promise<void>((res) => {
+      const interval = setInterval(() => {
+        if (this.#activeSearches.size === 0 && searchQueue.length === 0) {
+          clearInterval(interval);
+          res();
+        }
+      }, 1000);
+    });
   }
 
   async close() {
