@@ -17,6 +17,8 @@ import { retry } from '~/utils/retry';
 import { createLogger } from '~/utils/logger';
 import type { OptionalFieldsOnly } from '~/types/generics';
 
+const NOOP = () => {};
+
 const logger = createLogger({
   level: 'debug',
   transports: ['console', 'file'],
@@ -24,32 +26,43 @@ const logger = createLogger({
 
 const scrapedJobIds: Set<string> = new Set();
 
+type ScraperOptions = {
+  liAtCookie: string;
+  scrapedJobIds?: Array<string>;
+};
+
+type SearchOptions = {
+  onScrape: (job: Job) => void;
+  limit?: number;
+  excludeFields?: Array<keyof OptionalFieldsOnly<Job>>;
+  maxConcurrent?: number;
+};
+
 export class LinkedInScraper {
   #browser: Browser | null = null;
   #page: Page | null = null;
-  #opts: {
-    liAtCookie: string;
-    scrapedJobIds?: Array<string>;
-    onScrape?: (job: Job) => void;
-    limit?: number;
-    excludeFields?: Array<keyof OptionalFieldsOnly<Job>>;
-    maxConcurrent?: number;
-  } = { liAtCookie: '' };
+  #scraperOptions: Pick<ScraperOptions, 'liAtCookie'> = { liAtCookie: '' };
+  #searchOptions: Required<SearchOptions>;
   #activeSearches = new Set<number>();
 
-  private constructor(opts: { liAtCookie: string; scrapedJobIds?: Array<string> }) {
-    // this.#opts = { liAtCookie: opts.liAtCookie };
-    this.#opts = opts;
+  private constructor(opts: ScraperOptions) {
+    this.#scraperOptions = opts;
+    this.#searchOptions = {
+      onScrape: NOOP,
+      limit: 25,
+      excludeFields: [],
+      maxConcurrent: 3,
+    };
     opts.scrapedJobIds?.forEach((id) => {
       scrapedJobIds.add(id);
     });
   }
 
-  static async initialize(opts: { liAtCookie: string; scrapedJobIds?: Array<string> }) {
+  static async initialize(opts: ScraperOptions) {
     const scraper = new LinkedInScraper(opts);
 
     // Private names are shared between all instances of a given class
-    if (!scraper.#opts.liAtCookie) {
+    if (!scraper.#scraperOptions.liAtCookie) {
       console.error('liAtCookie must be provided.');
       process.exit(1);
     }
@@ -64,7 +77,7 @@ export class LinkedInScraper {
     await ctx.addCookies([
       {
         name: 'li_at',
-        value: scraper.#opts.liAtCookie,
+        value: scraper.#scraperOptions.liAtCookie,
         domain: '.linkedin.com',
         path: '/',
       },
@@ -281,11 +294,7 @@ export class LinkedInScraper {
     );
   }
 
-  async #extractJobsData(
-    limit: number,
-    excludeFields: Array<keyof OptionalFieldsOnly<Job>>,
-    onScrape: (job: Job) => void,
-  ) {
+  async #extractJobsData(limit: number) {
     if (!this.#page) {
       logger.error('Failed to load page');
       throw new Error('Failed to load page');
@@ -319,7 +328,9 @@ export class LinkedInScraper {
         // that concurrent scrapers won't attempt to scrape it again.
         scrapedJobIds.add(job.id);
 
-        const extractedJobsData = await extractor.extractJobDetails({ excludeFields });
+        const extractedJobsData = await extractor.extractJobDetails({
+          excludeFields: this.#searchOptions.excludeFields,
+        });
         const jobData = {
           ...job,
           company: sanitizeText(job.company),
@@ -329,7 +340,7 @@ export class LinkedInScraper {
           ...extractedJobsData,
         } satisfies Job;
 
-        onScrape(jobData);
+        this.#searchOptions.onScrape(jobData);
         jobCount++;
 
         await this.#page.waitForTimeout(getRandomArbitrary(1500, 4000));
@@ -348,7 +359,6 @@ export class LinkedInScraper {
       logger.error('Scraper not initialized');
       throw new Error('Scraper not initialized');
     }
-    const limit = this.#opts?.limit || 25;
 
     const searchUrl = this.#constructUrl(filters);
 
@@ -359,6 +369,7 @@ export class LinkedInScraper {
     logger.info('Search jobs page');
 
     let processedJobs = 0;
+    const limit = this.#searchOptions.limit;
 
     while (processedJobs < limit) {
       const loadedJobs = await this.#loadJobs();
@@ -370,11 +381,7 @@ export class LinkedInScraper {
 
       logger.info(`Loaded ${loadedJobs.totalJobs} jobs`);
 
-      processedJobs += await this.#extractJobsData(
-        limit - processedJobs,
-        this.#opts.excludeFields || [],
-        this.#opts.onScrape!,
-      );
+      processedJobs += await this.#extractJobsData(limit - processedJobs);
 
       if (processedJobs >= limit) {
         logger.info(`Job limit reached (${limit} jobs)`);
@@ -385,16 +392,8 @@ export class LinkedInScraper {
     }
   }
 
-  async searchJobs(
-    filters: Filters | Filters[],
-    opts: {
-      onScrape: (job: Job) => void;
-      limit?: number;
-      excludeFields?: Array<keyof OptionalFieldsOnly<Job>>;
-      maxConcurrent?: number;
-    },
-  ) {
-    this.#opts = { ...this.#opts, ...opts };
+  async searchJobs(filters: Filters | Filters[], opts: SearchOptions) {
+    this.#searchOptions = { ...this.#searchOptions, ...opts };
 
     if (!this.#browser) {
       logger.error('Scraper not initialized');
@@ -424,7 +423,8 @@ export class LinkedInScraper {
       await sleep(getRandomArbitrary(2000, 5000));
 
       try {
-        const scraper = await LinkedInScraper.initialize(this.#opts);
+        const scraper = await LinkedInScraper.initialize(this.#scraperOptions);
+        scraper.#searchOptions = this.#searchOptions;
 
         try {
           await scraper.#singleSearch(filter);
