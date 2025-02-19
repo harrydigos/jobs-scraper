@@ -408,13 +408,19 @@ export class LinkedInScraper {
 
     const searchQueue = searchFilters.map((filter, index) => ({ filter, index }));
 
+    const nextSearch = (callback: (item: (typeof searchQueue)[0]) => void) => {
+      const item = searchQueue.shift();
+      if (item) {
+        callback(item);
+      }
+    };
+
     const processSearch = async (filterData: { filter: Filters; index: number }) => {
       const { filter, index } = filterData;
       this.#activeSearches.add(index);
 
       try {
         // await sleep(getRandomArbitrary(2000, 5000));
-
         const scraper = await LinkedInScraper.initialize(this.#opts);
 
         try {
@@ -426,27 +432,14 @@ export class LinkedInScraper {
         }
       } finally {
         this.#activeSearches.delete(index);
-
-        // When a search finishes, start a new one if available
-        if (searchQueue.length > 0) {
-          const nextSearch = searchQueue.shift();
-          if (nextSearch) {
-            processSearch(nextSearch);
-          }
-        }
+        nextSearch(processSearch);
       }
     };
 
-    const initialBatchSize = Math.min(maxConcurrent, searchQueue.length);
-
-    for (let i = 0; i < initialBatchSize; i++) {
-      const nextSearch = searchQueue.shift();
-      if (nextSearch) {
-        processSearch(nextSearch);
-      }
+    for (let i = 0; i < Math.min(maxConcurrent, searchQueue.length); i++) {
+      nextSearch(processSearch);
     }
 
-    // Wait for all searches to finish with periodic check
     while (this.#activeSearches.size > 0 || searchQueue.length > 0) {
       await sleep(1000);
     }
