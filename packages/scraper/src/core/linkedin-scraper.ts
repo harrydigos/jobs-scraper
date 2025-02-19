@@ -210,9 +210,11 @@ export class LinkedInScraper {
 
         let currentCount = 0;
 
+        await sleep(getRandomArbitrary(500, 1500));
+
         // Keep scrolling to the last item into view until no more items are loaded
         while (true) {
-          await sleep(100);
+          await sleep(200);
 
           currentCount = await list.evaluate((e, s) => {
             const list = Array.from(e.querySelectorAll(s));
@@ -419,8 +421,9 @@ export class LinkedInScraper {
       const { filter, index } = filterData;
       this.#activeSearches.add(index);
 
+      await sleep(getRandomArbitrary(2000, 5000));
+
       try {
-        // await sleep(getRandomArbitrary(2000, 5000));
         const scraper = await LinkedInScraper.initialize(this.#opts);
 
         try {
