@@ -12,7 +12,7 @@ import {
 import type { Job } from '~/types/job';
 import { SELECTORS } from '~/constants/selectors';
 import { browserDefaults, LI_URLS } from '~/constants/browser';
-import { chunkArray, getRandomArbitrary, sanitizeText, sleep } from '~/utils/utils';
+import { getRandomArbitrary, sanitizeText, sleep } from '~/utils/utils';
 import { retry } from '~/utils/retry';
 import { createLogger } from '~/utils/logger';
 import type { OptionalFieldsOnly } from '~/types/generics';
@@ -27,10 +27,19 @@ const scrapedJobIds: Set<string> = new Set();
 export class LinkedInScraper {
   #browser: Browser | null = null;
   #page: Page | null = null;
-  #opts: { liAtCookie: string } = { liAtCookie: '' };
+  #opts: {
+    liAtCookie: string;
+    scrapedJobIds?: Array<string>;
+    onScrape?: (job: Job) => void;
+    limit?: number;
+    excludeFields?: Array<keyof OptionalFieldsOnly<Job>>;
+    maxConcurrent?: number;
+  } = { liAtCookie: '' };
+  #activeSearches = new Set<number>();
 
   private constructor(opts: { liAtCookie: string; scrapedJobIds?: Array<string> }) {
-    this.#opts = { liAtCookie: opts.liAtCookie };
+    // this.#opts = { liAtCookie: opts.liAtCookie };
+    this.#opts = opts;
     opts.scrapedJobIds?.forEach((id) => {
       scrapedJobIds.add(id);
     });
@@ -332,19 +341,12 @@ export class LinkedInScraper {
     return jobCount;
   }
 
-  async #singleSearch(
-    filters: Filters,
-    opts: {
-      onScrape: (job: Job, searchIndex?: number) => void;
-      limit?: number;
-      excludeFields?: Array<keyof OptionalFieldsOnly<Job>>;
-    },
-  ) {
+  async #singleSearch(filters: Filters) {
     if (!this.#page) {
       logger.error('Scraper not initialized');
       throw new Error('Scraper not initialized');
     }
-    const limit = opts?.limit || 25;
+    const limit = this.#opts?.limit || 25;
 
     const searchUrl = this.#constructUrl(filters);
 
@@ -368,8 +370,8 @@ export class LinkedInScraper {
 
       processedJobs += await this.#extractJobsData(
         limit - processedJobs,
-        opts.excludeFields || [],
-        opts.onScrape,
+        this.#opts.excludeFields || [],
+        this.#opts.onScrape!,
       );
 
       if (processedJobs >= limit) {
@@ -384,56 +386,69 @@ export class LinkedInScraper {
   async searchJobs(
     filters: Filters | Filters[],
     opts: {
-      onScrape: (job: Job, searchIndex?: number) => void;
+      onScrape: (job: Job) => void;
       limit?: number;
       excludeFields?: Array<keyof OptionalFieldsOnly<Job>>;
       maxConcurrent?: number;
     },
   ) {
-    const searchFilters = Array.isArray(filters) ? filters : [filters];
-    const maxConcurrent = opts.maxConcurrent || 3;
-
-    if (searchFilters.length === 1) {
-      return this.#singleSearch(searchFilters[0], opts);
-    }
+    this.#opts = { ...this.#opts, ...opts };
 
     if (!this.#browser) {
       logger.error('Scraper not initialized');
       throw new Error('Scraper not initialized');
     }
 
-    const chunks = chunkArray(searchFilters, maxConcurrent);
+    const searchFilters = Array.isArray(filters) ? filters : [filters];
+    const maxConcurrent = opts.maxConcurrent || 3;
 
-    for (const [chunkIndex, filtersChunk] of chunks.entries()) {
-      logger.info(
-        `Processing chunk ${chunkIndex + 1}/${chunks.length} (${filtersChunk.length} searches)`,
-      );
+    if (searchFilters.length === 1) {
+      return this.#singleSearch(searchFilters[0]);
+    }
 
-      const searchPromises = filtersChunk.map(async (filterSet, indexInChunk) => {
-        await sleep(getRandomArbitrary(2000, 5000));
+    const searchQueue = searchFilters.map((filter, index) => ({ filter, index }));
 
-        const searchIndex = chunkIndex * maxConcurrent + indexInChunk;
+    const processSearch = async (filterData: { filter: Filters; index: number }) => {
+      const { filter, index } = filterData;
+      this.#activeSearches.add(index);
+
+      try {
+        // await sleep(getRandomArbitrary(2000, 5000));
+
         const scraper = await LinkedInScraper.initialize(this.#opts);
 
         try {
-          await scraper.#singleSearch(filterSet, {
-            ...opts,
-            onScrape: (job) => opts.onScrape(job, searchIndex),
-          });
-        } catch (error) {
-          logger.error(`Error in search ${searchIndex}:`, error);
+          await scraper.#singleSearch(filter);
+        } catch (e) {
+          logger.error('Error in search:', e);
         } finally {
-          await scraper
-            .close()
-            .catch((e) => logger.error(`Error closing context for search ${searchIndex}:`, e));
+          await scraper.close().catch((e) => logger.error('Error closing context for search', e));
         }
-      });
+      } finally {
+        this.#activeSearches.delete(index);
 
-      await Promise.allSettled(searchPromises);
-
-      if (chunkIndex < chunks.length - 1) {
-        await sleep(getRandomArbitrary(2000, 5000));
+        // When a search finishes, start a new one if available
+        if (searchQueue.length > 0) {
+          const nextSearch = searchQueue.shift();
+          if (nextSearch) {
+            processSearch(nextSearch);
+          }
+        }
       }
+    };
+
+    const initialBatchSize = Math.min(maxConcurrent, searchQueue.length);
+
+    for (let i = 0; i < initialBatchSize; i++) {
+      const nextSearch = searchQueue.shift();
+      if (nextSearch) {
+        processSearch(nextSearch);
+      }
+    }
+
+    // Wait for all searches to finish with periodic check
+    while (this.#activeSearches.size > 0 || searchQueue.length > 0) {
+      await sleep(1000);
     }
   }
 
