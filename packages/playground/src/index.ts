@@ -25,72 +25,45 @@ async function main() {
     const scraper = await LinkedInScraper.initialize({
       liAtCookie: process.env.LI_AT_COOKIE!,
       scrapedJobIds: jobIds,
+      browserOptions: { headless: true },
     });
 
     await scraper.searchJobs(
       [
         {
-          keywords: 'software engineer',
-          location: 'greece',
-          relevance: 'recent',
-          remote: ['remote', 'hybrid'],
-          experience: ['mid-senior'],
-          datePosted: '7',
-          jobType: ['fulltime'],
-        },
-        {
           keywords: 'frontend engineer',
           location: 'greece',
-          relevance: 'recent',
-          remote: ['remote', 'hybrid'],
-          experience: ['mid-senior'],
-          datePosted: '7',
-          jobType: ['fulltime'],
         },
         {
           keywords: 'full stack engineer',
           location: 'greece',
-          relevance: 'recent',
-          remote: ['remote', 'hybrid'],
-          experience: ['mid-senior'],
-          datePosted: '7',
-          jobType: ['fulltime'],
         },
         {
           keywords: 'frontend engineer',
           location: 'European Union',
-          relevance: 'recent',
-          remote: ['remote'],
-          experience: ['mid-senior', 'associate', 'entry'],
-          jobType: ['fulltime'],
         },
         {
           keywords: 'full stack engineer',
           location: 'European Union',
-          relevance: 'recent',
-          remote: ['remote'],
-          experience: ['mid-senior', 'associate', 'entry'],
-          jobType: ['fulltime'],
         },
         {
           keywords: 'frontend engineer',
-          location: 'EMEA',
-          relevance: 'recent',
-          remote: ['remote'],
-          experience: ['mid-senior', 'associate', 'entry'],
-          jobType: ['fulltime'],
+          location: 'European Economic Area',
         },
         {
           keywords: 'full stack engineer',
-          location: 'EMEA',
-          relevance: 'recent',
-          remote: ['remote'],
-          experience: ['mid-senior', 'associate', 'entry'],
-          jobType: ['fulltime'],
+          location: 'European Economic Area',
         },
       ],
       {
-        limit: 300,
+        globalFilters: {
+          relevance: 'recent',
+          remote: ['remote'],
+          experience: ['mid-senior'],
+          jobType: ['fulltime'],
+          datePosted: '7',
+        },
+        limit: 100,
         excludeFields: [
           'description',
           'applyLink',
@@ -101,7 +74,7 @@ async function main() {
           'jobInsights',
           'skillsRequired',
         ],
-        maxConcurrent: 3,
+        maxConcurrent: 2,
         onScrape: async (job) => {
           await createJob(job);
         },

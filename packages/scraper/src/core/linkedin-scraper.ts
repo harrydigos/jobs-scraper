@@ -37,6 +37,7 @@ type SearchOptions = {
   limit?: number;
   excludeFields?: Array<keyof OptionalFieldsOnly<Job>>;
   maxConcurrent?: number;
+  globalFilters?: OptionalFieldsOnly<Filters>;
 };
 
 export class LinkedInScraper {
@@ -48,6 +49,7 @@ export class LinkedInScraper {
     limit: 25,
     excludeFields: [],
     maxConcurrent: 3,
+    globalFilters: {},
   };
   #activeSearches = new Set<number>();
 
@@ -394,9 +396,7 @@ export class LinkedInScraper {
     }
   }
 
-  async searchJobs(filters: Filters[], opts: SearchOptions): Promise<void>;
-  async searchJobs(filters: Filters, opts: Omit<SearchOptions, 'maxConcurrent'>): Promise<void>;
-  async searchJobs(filters: Filters | Filters[], opts: SearchOptions): Promise<void> {
+  async searchJobs(filters: Filters[], opts: SearchOptions): Promise<void> {
     this.#searchOptions = { ...this.#searchOptions, ...opts };
 
     if (!this.#browser) {
@@ -404,14 +404,7 @@ export class LinkedInScraper {
       throw new Error('Scraper not initialized');
     }
 
-    const searchFilters = Array.isArray(filters) ? filters : [filters];
-    const maxConcurrent = opts.maxConcurrent || 3;
-
-    if (searchFilters.length === 1) {
-      return this.#singleSearch(searchFilters[0]);
-    }
-
-    const searchQueue = searchFilters.map((filter, index) => ({ filter, index }));
+    const searchQueue = filters.map((filter, index) => ({ filter, index }));
 
     const nextSearch = (callback: (item: (typeof searchQueue)[0]) => void) => {
       const item = searchQueue.shift();
@@ -431,7 +424,7 @@ export class LinkedInScraper {
         scraper.#searchOptions = this.#searchOptions;
 
         try {
-          await scraper.#singleSearch(filter);
+          await scraper.#singleSearch({ ...this.#searchOptions.globalFilters, ...filter });
         } catch (e) {
           logger.error('Error in search:', e);
         } finally {
@@ -443,7 +436,7 @@ export class LinkedInScraper {
       }
     };
 
-    for (let i = 0; i < Math.min(maxConcurrent, searchQueue.length); i++) {
+    for (let i = 0; i < Math.min(opts.maxConcurrent || 3, searchQueue.length); i++) {
       nextSearch(processSearch);
     }
 
