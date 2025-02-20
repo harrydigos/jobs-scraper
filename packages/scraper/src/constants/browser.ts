@@ -23,5 +23,5 @@ export const browserDefaults = {
     // "--window-size=1920,1080",
   ],
   slowMo: 50,
-  // timeout: 30000,
-} satisfies LaunchOptions;
+  timeout: 30000,
+} as const satisfies LaunchOptions;

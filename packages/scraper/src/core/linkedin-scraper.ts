@@ -1,4 +1,4 @@
-import { chromium, type Browser, type Page } from 'playwright';
+import { chromium, LaunchOptions, type Browser, type Page } from 'playwright';
 import { JobDataExtractor } from '~/core/job-data-extractor';
 import {
   DATE_POSTED,
@@ -29,6 +29,7 @@ const scrapedJobIds: Set<string> = new Set();
 type ScraperOptions = {
   liAtCookie: string;
   scrapedJobIds?: Array<string>;
+  browserOptions?: LaunchOptions;
 };
 
 type SearchOptions = {
@@ -42,17 +43,16 @@ export class LinkedInScraper {
   #browser: Browser | null = null;
   #page: Page | null = null;
   #scraperOptions: Pick<ScraperOptions, 'liAtCookie'> = { liAtCookie: '' };
-  #searchOptions: Required<SearchOptions>;
+  #searchOptions: Required<SearchOptions> = {
+    onScrape: NOOP,
+    limit: 25,
+    excludeFields: [],
+    maxConcurrent: 3,
+  };
   #activeSearches = new Set<number>();
 
   private constructor(opts: ScraperOptions) {
     this.#scraperOptions = opts;
-    this.#searchOptions = {
-      onScrape: NOOP,
-      limit: 25,
-      excludeFields: [],
-      maxConcurrent: 3,
-    };
     opts.scrapedJobIds?.forEach((id) => {
       scrapedJobIds.add(id);
     });
@@ -68,7 +68,7 @@ export class LinkedInScraper {
     }
 
     logger.info('Connecting to a scraping browser');
-    scraper.#browser = await chromium.launch(browserDefaults);
+    scraper.#browser = await chromium.launch({ ...browserDefaults, ...opts.browserOptions });
 
     logger.info('Connected, navigating...');
 
@@ -135,7 +135,9 @@ export class LinkedInScraper {
       url.searchParams.append(URL_PARAMS.easyApply, `${filters.easyApply}`);
     }
 
-    return url.toString();
+    const urlStr = url.toString();
+    logger.info('Constructed url', urlStr);
+    return urlStr;
   }
 
   async #isLoggedIn() {
