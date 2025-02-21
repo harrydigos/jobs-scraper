@@ -5,7 +5,7 @@ const dbPath = getDbPath();
 
 export default defineConfig({
   dialect: 'sqlite',
-  schema: './schema.ts',
+  schema: './src/schema.ts',
   out: './drizzle',
   dbCredentials: {
     url: dbPath,
