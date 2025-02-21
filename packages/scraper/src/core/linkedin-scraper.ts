@@ -19,7 +19,8 @@ const logger = createLogger({
   transports: ['console', 'file'],
 });
 
-const scrapedJobIds: Set<string> = new Set();
+const scrapedJobIds = new Set<string>();
+const activeSearches = new Set<number>();
 
 export class LinkedInScraper {
   #browser: Browser | null = null;
@@ -32,7 +33,6 @@ export class LinkedInScraper {
     maxConcurrent: 3,
     filters: {},
   };
-  #activeSearches = new Set<number>();
 
   private constructor(opts: ScraperOptions) {
     this.#scraperOptions = opts;
@@ -381,6 +381,12 @@ export class LinkedInScraper {
   }
 
   async searchJobs(filters: Filters[], opts: SearchOptions): Promise<void> {
+    if (activeSearches.size > 0) {
+      throw new Error(
+        'Scraping is already in progress. Please wait for it to complete or create a new scraper instance.',
+      );
+    }
+
     this.#searchOptions = { ...this.#searchOptions, ...opts };
 
     if (!this.#browser) {
@@ -399,7 +405,7 @@ export class LinkedInScraper {
 
     const processSearch = async (filterData: { filter: Filters; index: number }) => {
       const { filter, index } = filterData;
-      this.#activeSearches.add(index);
+      activeSearches.add(index);
 
       await sleep(getRandomArbitrary(2000, 5000));
 
@@ -415,7 +421,7 @@ export class LinkedInScraper {
           await scraper.close().catch((e) => logger.error('Error closing context for search', e));
         }
       } finally {
-        this.#activeSearches.delete(index);
+        activeSearches.delete(index);
         nextSearch(processSearch);
       }
     };
@@ -427,7 +433,7 @@ export class LinkedInScraper {
     // wait until completion
     await new Promise<void>((res) => {
       const interval = setInterval(() => {
-        if (this.#activeSearches.size === 0 && searchQueue.length === 0) {
+        if (activeSearches.size === 0 && searchQueue.length === 0) {
           clearInterval(interval);
           res();
         }
