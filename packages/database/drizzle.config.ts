@@ -1,5 +1,5 @@
 import { defineConfig } from 'drizzle-kit';
-import { getDbPath } from './utils';
+import { getDbPath } from './src/utils';
 
 const dbPath = getDbPath();
 

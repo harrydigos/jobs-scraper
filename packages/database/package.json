@@ -2,7 +2,7 @@
   "name": "database",
   "version": "0.0.0",
   "private": true,
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "dev": "tsc --watch",
     "build": "tsc",
