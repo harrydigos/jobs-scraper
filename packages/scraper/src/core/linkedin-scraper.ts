@@ -1,21 +1,16 @@
-import { chromium, LaunchOptions, type Browser, type Page } from 'playwright';
+import { chromium } from 'playwright';
 import { JobDataExtractor } from '~/core/job-data-extractor';
-import {
-  DATE_POSTED,
-  EXPERIENCE,
-  type Filters,
-  JOB_TYPE,
-  RELEVANCE,
-  REMOTE,
-  URL_PARAMS,
-} from '~/types/filters';
-import type { Job } from '~/types/job';
 import { SELECTORS } from '~/constants/selectors';
 import { browserDefaults, LI_URLS } from '~/constants/browser';
 import { getRandomArbitrary, sanitizeText, sleep } from '~/utils/utils';
 import { retry } from '~/utils/retry';
 import { createLogger } from '~/utils/logger';
-import type { OptionalFieldsOnly } from '~/types/generics';
+import { FILTERS, URL_PARAMS } from '~/constants/filters';
+
+import type { Browser, Page } from 'playwright';
+import type { ScraperOptions, SearchOptions } from '~/types/scraper';
+import type { Filters } from '~/types/filters';
+import type { Job } from '~/types/job';
 
 const NOOP = () => {};
 
@@ -26,20 +21,6 @@ const logger = createLogger({
 
 const scrapedJobIds: Set<string> = new Set();
 
-type ScraperOptions = {
-  liAtCookie: string;
-  scrapedJobIds?: Array<string>;
-  browserOptions?: LaunchOptions;
-};
-
-type SearchOptions = {
-  onScrape: (job: Job) => void;
-  limit?: number;
-  excludeFields?: Array<keyof OptionalFieldsOnly<Job>>;
-  maxConcurrent?: number;
-  globalFilters?: OptionalFieldsOnly<Filters>;
-};
-
 export class LinkedInScraper {
   #browser: Browser | null = null;
   #page: Page | null = null;
@@ -47,9 +28,9 @@ export class LinkedInScraper {
   #searchOptions: Required<SearchOptions> = {
     onScrape: NOOP,
     limit: 25,
-    excludeFields: [],
+    fieldsToExlude: [],
     maxConcurrent: 3,
-    globalFilters: {},
+    filters: {},
   };
   #activeSearches = new Set<number>();
 
@@ -108,28 +89,31 @@ export class LinkedInScraper {
     url.searchParams.append(URL_PARAMS.location, filters.location);
 
     if (filters.relevance) {
-      url.searchParams.append(URL_PARAMS.sort, RELEVANCE[filters.relevance]);
+      url.searchParams.append(URL_PARAMS.sort, FILTERS.relevance[filters.relevance]);
     }
 
     if (filters.remote?.length) {
-      url.searchParams.append(URL_PARAMS.remote, filters.remote.map((r) => REMOTE[r]).join(','));
+      url.searchParams.append(
+        URL_PARAMS.remote,
+        filters.remote.map((r) => FILTERS.remote[r]).join(','),
+      );
     }
 
     if (filters.datePosted) {
-      url.searchParams.append(URL_PARAMS.datePosted, DATE_POSTED[filters.datePosted]);
+      url.searchParams.append(URL_PARAMS.datePosted, FILTERS.datePosted[filters.datePosted]);
     }
 
     if (filters.experience?.length) {
       url.searchParams.append(
         URL_PARAMS.experience,
-        filters.experience.map((e) => EXPERIENCE[e]).join(','),
+        filters.experience.map((e) => FILTERS.experience[e]).join(','),
       );
     }
 
     if (filters.jobType?.length) {
       url.searchParams.append(
         URL_PARAMS.jobType,
-        filters.jobType.map((t) => JOB_TYPE[t]).join(','),
+        filters.jobType.map((t) => FILTERS.jobType[t]).join(','),
       );
     }
 
@@ -333,7 +317,7 @@ export class LinkedInScraper {
         scrapedJobIds.add(job.id);
 
         const extractedJobsData = await extractor.extractJobDetails({
-          excludeFields: this.#searchOptions.excludeFields,
+          excludeFields: this.#searchOptions.fieldsToExlude,
         });
         const jobData = {
           ...job,
@@ -424,7 +408,7 @@ export class LinkedInScraper {
         scraper.#searchOptions = this.#searchOptions;
 
         try {
-          await scraper.#singleSearch({ ...this.#searchOptions.globalFilters, ...filter });
+          await scraper.#singleSearch({ ...this.#searchOptions.filters, ...filter });
         } catch (e) {
           logger.error('Error in search:', e);
         } finally {

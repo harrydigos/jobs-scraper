@@ -56,15 +56,15 @@ async function main() {
         },
       ],
       {
-        globalFilters: {
+        filters: {
           relevance: 'recent',
           remote: ['remote'],
-          experience: ['mid-senior'],
+          experience: ['mid-senior', 'associate', 'entry'],
           jobType: ['fulltime'],
           datePosted: '7',
         },
         limit: 100,
-        excludeFields: [
+        fieldsToExlude: [
           'description',
           'applyLink',
           'isReposted',
@@ -75,9 +75,7 @@ async function main() {
           'skillsRequired',
         ],
         maxConcurrent: 2,
-        onScrape: async (job) => {
-          await createJob(job);
-        },
+        onScrape: (job) => createJob(job),
       },
     );
 
