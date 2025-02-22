@@ -5,8 +5,12 @@ export const jobs = sqliteTable(
   'jobs',
   {
     id: text('id').primaryKey(),
-    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
     title: text('title').notNull(),
     link: text('link').notNull(),
     company: text('company').notNull(),
