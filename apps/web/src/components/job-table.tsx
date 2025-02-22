@@ -112,14 +112,15 @@ const JobTable = () => {
   const [search, setSearch] = createSignal(searchParams.search || '');
   const [nextCursor, setNextCursor] = createSignal<string | null>(null);
 
-  const throttledSearch = debounce((search: string) => {
+  const updateSearchFilters = (params: Partial<SearchParams>) => {
     setNextCursor(null);
-    setSearchParams(
-      {
-        search: search.trim(),
-      },
-      { replace: true, scroll: true },
-    );
+    setSearchParams(params, { replace: true, scroll: true });
+  };
+
+  const throttledSearch = debounce((search: string) => {
+    updateSearchFilters({
+      search: search.trim(),
+    });
   }, 250);
 
   const [tableData] = createResource(
@@ -225,13 +226,9 @@ const JobTable = () => {
             type="date"
             value={searchParams.startDate || ''}
             onInput={(e) => {
-              setNextCursor(null);
-              setSearchParams(
-                {
-                  startDate: e.target.value,
-                },
-                { replace: true, scroll: true },
-              );
+              updateSearchFilters({
+                startDate: e.target.value,
+              });
             }}
             class="px-4 py-2 border border-gray-200 rounded-md text-sm"
           />
@@ -239,13 +236,9 @@ const JobTable = () => {
             type="date"
             value={searchParams.endDate || ''}
             onInput={(e) => {
-              setNextCursor(null);
-              setSearchParams(
-                {
-                  endDate: e.target.value,
-                },
-                { replace: true, scroll: true },
-              );
+              updateSearchFilters({
+                endDate: e.target.value,
+              });
             }}
             class="px-4 py-2 border border-gray-200 rounded-md text-sm"
           />
@@ -254,8 +247,10 @@ const JobTable = () => {
             <button
               type="button"
               onClick={() => {
-                setNextCursor(null);
-                setSearchParams({ startDate: '', endDate: '' }, { replace: true, scroll: true });
+                updateSearchFilters({
+                  startDate: '',
+                  endDate: '',
+                });
               }}
             >
               Clear dates
