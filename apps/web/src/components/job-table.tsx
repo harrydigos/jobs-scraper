@@ -1,34 +1,36 @@
-import { leadingAndTrailing, throttle } from '@solid-primitives/scheduled';
+import { debounce } from '@solid-primitives/scheduled';
 import { createAsync, query, useSearchParams } from '@solidjs/router';
 import { ColumnDef, createSolidTable, flexRender, getCoreRowModel } from '@tanstack/solid-table';
-import { and, between, db, desc, getAllJobsCount, Job, jobs, like, or } from 'database';
-import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
+import { and, between, db, desc, getAllJobsCount, type Job, jobs, like, lt, or } from 'database';
+import { For, Show, createMemo, createResource, createSignal, onCleanup, onMount } from 'solid-js';
 import { z } from 'zod';
 
 const urlSchema = z.string().url();
 
-const getJobs = query(async (search: string, startDate: string, endDate: string) => {
-  'use server';
-  search = `%${search.toLowerCase()}%`;
-  const query = db
-    .select()
-    .from(jobs)
-    .where(
-      and(
-        or(like(jobs.title, search), like(jobs.company, search)),
-        startDate || endDate
-          ? between(
-              jobs.updatedAt,
-              startDate || new Date(1970, 1).toISOString(),
-              endDate ||
-                new Date(new Date().setFullYear(new Date().getFullYear() + 100)).toISOString(), // 100 years ok lol
-            )
-          : undefined,
-      ),
-    );
+const getJobs = query(
+  async (search: string, startDate: string, endDate: string, cursor: string | null = null) => {
+    'use server';
+    search = `%${search.toLowerCase()}%`;
 
-  return await query.orderBy(desc(jobs.createdAt));
-}, 'jobs');
+    const start = startDate || new Date(1970, 1).toISOString();
+    const end =
+      endDate || new Date(new Date().setFullYear(new Date().getFullYear() + 100)).toISOString();
+
+    const query = db
+      .select()
+      .from(jobs)
+      .where(
+        and(
+          cursor ? lt(jobs.updatedAt, cursor) : undefined,
+          or(like(jobs.title, search), like(jobs.company, search)),
+          between(jobs.updatedAt, start, end),
+        ),
+      );
+
+    return await query.limit(25).orderBy(desc(jobs.updatedAt));
+  },
+  'jobs',
+);
 
 const totalJobs = query(async () => {
   'use server';
@@ -103,41 +105,81 @@ const searchParamsSchema = z.object({
     .transform((val) => (Array.isArray(val) || !val ? '' : new Date(val).toISOString())),
 });
 
-const JobTable = () => {
-  const [searchParams, setSearchParams] = useSearchParams<{
-    search: string;
-    startDate: string;
-    endDate: string;
-  }>();
+type SearchParams = z.infer<typeof searchParamsSchema>;
 
-  const throttledSearch = leadingAndTrailing(
-    throttle,
-    (search: string) =>
-      setSearchParams(
-        {
-          search: search.trim(),
-        },
-        { replace: true },
-      ),
-    1000,
+const JobTable = () => {
+  const [searchParams, setSearchParams] = useSearchParams<SearchParams>();
+  const [search, setSearch] = createSignal(searchParams.search || '');
+  const [nextCursor, setNextCursor] = createSignal<string | null>(null);
+
+  const throttledSearch = debounce((search: string) => {
+    setNextCursor(null);
+    setSearchParams(
+      {
+        search: search.trim(),
+      },
+      { replace: true, scroll: true },
+    );
+  }, 250);
+
+  const [tableData] = createResource(
+    () => [searchParams.search, searchParams.startDate, searchParams.endDate, nextCursor()],
+    async ([search, startDate, endDate, cursor]) => {
+      const validatedParams = searchParamsSchema.parse({
+        search,
+        startDate,
+        endDate,
+      });
+
+      return getJobs(
+        validatedParams.search,
+        validatedParams.startDate,
+        validatedParams.endDate,
+        cursor,
+      );
+    },
   );
 
-  const [search, setSearch] = createSignal(searchParams.search || '');
+  const jobsData = createMemo<Job[]>((prev) => {
+    if (tableData.state === 'errored') {
+      return [];
+    }
 
-  const tableData = createAsync(async () => {
-    const validatedParams = searchParamsSchema.parse(searchParams);
+    if (tableData.state === 'ready') {
+      if (nextCursor()) {
+        return [...prev, ...tableData()];
+      }
+      return tableData();
+    }
 
-    return getJobs(validatedParams.search, validatedParams.startDate, validatedParams.endDate);
-  });
+    return prev;
+  }, tableData() || []);
 
   const totalJobsCount = createAsync(() => totalJobs());
 
   const table = createSolidTable({
     get data() {
-      return tableData() || [];
+      return jobsData();
     },
     columns: defaultColumns,
     getCoreRowModel: getCoreRowModel(),
+  });
+
+  let bottomElRef: HTMLDivElement | undefined;
+
+  onMount(() => {
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && tableData.state === 'ready') {
+        const lastJob = jobsData()?.at(-1);
+
+        if (lastJob) {
+          setNextCursor(lastJob.updatedAt);
+        }
+      }
+    });
+
+    io.observe(bottomElRef!);
+    onCleanup(() => io.disconnect());
   });
 
   let searchInputRef: HTMLInputElement | undefined;
@@ -160,62 +202,72 @@ const JobTable = () => {
 
   return (
     <main class="p-4 max-w-7xl mx-auto">
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="mb-4 relative">
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search by title, company"
-            value={search()}
-            onInput={(e) => {
-              const value = e.target.value;
-              setSearch(value);
-              throttledSearch(value);
-            }}
-            class="w-full px-4 py-2 border border-gray-200 rounded-md text-sm placeholder-gray-400"
-          />
-          <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
-            ⌘K
+      <div class="bg-white rounded-lg shadow p-6 ">
+        <div class="sticky top-4 bg-white">
+          <div class="mb-4 relative">
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search by title, company"
+              value={search()}
+              onInput={(e) => {
+                const value = e.target.value;
+                setSearch(value);
+                throttledSearch(value);
+              }}
+              class="w-full px-4 py-2 border border-gray-200 rounded-md text-sm placeholder-gray-400"
+            />
+            <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
+              ⌘K
+            </div>
           </div>
-        </div>
-        <input
-          type="date"
-          value={(searchParams.startDate as string) || ''}
-          onInput={(e) =>
-            setSearchParams(
-              {
-                startDate: e.target.value,
-              },
-              { replace: true },
-            )
-          }
-          class="px-4 py-2 border border-gray-200 rounded-md text-sm"
-        />
-        <input
-          type="date"
-          value={(searchParams.endDate as string) || ''}
-          onInput={(e) =>
-            setSearchParams(
-              {
-                endDate: e.target.value,
-              },
-              { replace: true },
-            )
-          }
-          class="px-4 py-2 border border-gray-200 rounded-md text-sm"
-        />
+          <input
+            type="date"
+            value={searchParams.startDate || ''}
+            onInput={(e) => {
+              setNextCursor(null);
+              setSearchParams(
+                {
+                  startDate: e.target.value,
+                },
+                { replace: true, scroll: true },
+              );
+            }}
+            class="px-4 py-2 border border-gray-200 rounded-md text-sm"
+          />
+          <input
+            type="date"
+            value={searchParams.endDate || ''}
+            onInput={(e) => {
+              setNextCursor(null);
+              setSearchParams(
+                {
+                  endDate: e.target.value,
+                },
+                { replace: true, scroll: true },
+              );
+            }}
+            class="px-4 py-2 border border-gray-200 rounded-md text-sm"
+          />
 
-        <button
-          type="button"
-          onClick={() => setSearchParams({ startDate: '', endDate: '' }, { replace: true })}
-        >
-          Clear
-        </button>
+          <Show when={searchParams.startDate || searchParams.endDate}>
+            <button
+              type="button"
+              onClick={() => {
+                setNextCursor(null);
+                setSearchParams({ startDate: '', endDate: '' }, { replace: true, scroll: true });
+              }}
+            >
+              Clear dates
+            </button>
+          </Show>
 
-        <div class="overflow-x-auto rounded-lg border border-gray-200">
           <div class="mt-4 text-sm text-gray-500">
             Showing {table.getRowCount()} of total {totalJobsCount()?.[0].count || 0}
           </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
           <table class="w-full">
             <thead>
               <tr class="bg-gray-50">
@@ -240,6 +292,8 @@ const JobTable = () => {
               </For>
             </tbody>
           </table>
+
+          <div ref={bottomElRef} />
         </div>
       </div>
     </main>
