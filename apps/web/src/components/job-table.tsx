@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 const urlSchema = z.string().url();
 
-const getJobs = query(async (search = '', startDate = '', endDate = '') => {
+const getJobs = query(async (search: string, startDate: string, endDate: string) => {
   'use server';
   search = `%${search.toLowerCase()}%`;
   const query = db
@@ -88,35 +88,46 @@ const defaultColumns: ColumnDef<Job>[] = [
   },
 ];
 
-const JobTable = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+const searchParamsSchema = z.object({
+  search: z
+    .string()
+    .optional()
+    .transform((val) => (Array.isArray(val) ? '' : val || '')),
+  startDate: z
+    .string()
+    .optional()
+    .transform((val) => (Array.isArray(val) || !val ? '' : new Date(val).toISOString())),
+  endDate: z
+    .string()
+    .optional()
+    .transform((val) => (Array.isArray(val) || !val ? '' : new Date(val).toISOString())),
+});
 
-  // TODO: validate url
+const JobTable = () => {
+  const [searchParams, setSearchParams] = useSearchParams<{
+    search: string;
+    startDate: string;
+    endDate: string;
+  }>();
+
   const throttledSearch = leadingAndTrailing(
     throttle,
     (search: string) =>
-      setSearchParams({
-        search: search.trim(),
-        startDate: (searchParams.startDate as string) || '',
-        endDate: (searchParams.endDate as string) || '',
-      }),
+      setSearchParams(
+        {
+          search: search.trim(),
+        },
+        { replace: true },
+      ),
     1000,
   );
 
-  const [search, setSearch] = createSignal((searchParams.search as string) || '');
+  const [search, setSearch] = createSignal(searchParams.search || '');
 
   const tableData = createAsync(async () => {
-    return (
-      (await getJobs(
-        Array.isArray(searchParams?.search) ? '' : searchParams.search || '',
-        Array.isArray(searchParams?.startDate) || !searchParams?.startDate
-          ? ''
-          : new Date(searchParams.startDate).toISOString(),
-        Array.isArray(searchParams?.endDate) || !searchParams?.endDate
-          ? ''
-          : new Date(searchParams.endDate).toISOString(),
-      )) || []
-    );
+    const validatedParams = searchParamsSchema.parse(searchParams);
+
+    return getJobs(validatedParams.search, validatedParams.startDate, validatedParams.endDate);
   });
 
   const totalJobsCount = createAsync(() => totalJobs());
@@ -171,11 +182,12 @@ const JobTable = () => {
           type="date"
           value={(searchParams.startDate as string) || ''}
           onInput={(e) =>
-            setSearchParams({
-              search: search(),
-              startDate: e.target.value,
-              endDate: (searchParams.endDate as string) || '',
-            })
+            setSearchParams(
+              {
+                startDate: e.target.value,
+              },
+              { replace: true },
+            )
           }
           class="px-4 py-2 border border-gray-200 rounded-md text-sm"
         />
@@ -183,18 +195,19 @@ const JobTable = () => {
           type="date"
           value={(searchParams.endDate as string) || ''}
           onInput={(e) =>
-            setSearchParams({
-              search: search(),
-              startDate: (searchParams.startDate as string) || '',
-              endDate: e.target.value,
-            })
+            setSearchParams(
+              {
+                endDate: e.target.value,
+              },
+              { replace: true },
+            )
           }
           class="px-4 py-2 border border-gray-200 rounded-md text-sm"
         />
 
         <button
           type="button"
-          onClick={() => setSearchParams({ search: search(), startDate: '', endDate: '' })}
+          onClick={() => setSearchParams({ startDate: '', endDate: '' }, { replace: true })}
         >
           Clear
         </button>
