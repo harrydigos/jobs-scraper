@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "noEmit": true,
+    "strict": true,
+    "isolatedModules": true
+  },
+  "exclude": ["node_modules", ".turbo"]
+}

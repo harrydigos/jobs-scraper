@@ -6,7 +6,7 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md}\" \"!**/.*/**\"",
-    "tsc:check": "pnpm -r exec tsc --noEmit --project tsconfig.json --skipLibCheck --excludeDirectories node_modules,dist",
+    "tsc:check": "pnpm -r exec tsc --noEmit",
     "db:check": "turbo run db:check",
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",
