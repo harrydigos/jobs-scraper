@@ -29,7 +29,10 @@ const JobTable = () => {
   const [search, setSearch] = createSignal(searchParams.search || '');
   const [nextCursor, setNextCursor] = createSignal<string | null>(null);
 
+  let tableContainerRef: HTMLDivElement | undefined;
+
   const updateSearchFilters = (params: Partial<SearchParams>) => {
+    tableContainerRef?.scrollTo({ top: 0 });
     setNextCursor(null);
     setSearchParams(params, { replace: true, scroll: true });
   };
@@ -83,7 +86,7 @@ const JobTable = () => {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  let bottomElRef: HTMLDivElement | undefined;
+  let bottomElRef: HTMLTableRowElement | undefined;
 
   onMount(() => {
     const io = new IntersectionObserver(([entry]) => {
@@ -120,8 +123,8 @@ const JobTable = () => {
 
   return (
     <main class="p-4 max-w-7xl mx-auto">
-      <div class="bg-white rounded-lg shadow p-6 ">
-        <div class="sticky top-4 bg-white">
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="bg-white">
           <div class="mb-4 relative">
             <input
               ref={searchInputRef}
@@ -179,13 +182,18 @@ const JobTable = () => {
           </div>
         </div>
 
-        <div class="overflow-x-auto rounded-lg border border-gray-200">
+        <div
+          ref={tableContainerRef}
+          class="overflow-auto max-h-[75dvh] rounded-lg border border-gray-200"
+        >
           <table class="w-full">
-            <thead>
+            <thead class="sticky top-0">
               <tr class="bg-gray-50">
                 <For each={table.getFlatHeaders()}>
                   {(header) => (
-                    <th>{flexRender(header.column.columnDef.header, header.getContext())}</th>
+                    <th class="whitespace-nowrap">
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </th>
                   )}
                 </For>
               </tr>
@@ -202,10 +210,9 @@ const JobTable = () => {
                   </tr>
                 )}
               </For>
+              <tr ref={bottomElRef} />
             </tbody>
           </table>
-
-          <div ref={bottomElRef} />
         </div>
       </div>
     </main>
