@@ -12,9 +12,13 @@ const getJobs = query(
     'use server';
     search = `%${search.toLowerCase()}%`;
 
-    const start = startDate || new Date(1970, 1).toISOString();
-    const end =
-      endDate || new Date(new Date().setFullYear(new Date().getFullYear() + 100)).toISOString();
+    // TODO: add a date lib bc this is hell
+    const start = startDate
+      ? new Date(new Date(startDate).setHours(0, 0, 0, 0)).toISOString()
+      : new Date(1970, 0, 1).toISOString();
+    const end = endDate
+      ? new Date(new Date(endDate).setHours(23, 59, 59, 999)).toISOString()
+      : new Date(new Date().setFullYear(new Date().getFullYear() + 100)).toISOString();
 
     const query = db
       .select()
