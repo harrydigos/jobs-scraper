@@ -6,6 +6,8 @@ import { For, Show, createMemo, createResource, createSignal, onCleanup, onMount
 import { z } from 'zod';
 import { getJobs, getTotalJobs } from '~/lib/queries';
 import { defaultColumns } from './columns';
+import { Virtualizer } from 'virtua/solid';
+import { isServer } from 'solid-js/web';
 
 const searchParamsSchema = z.object({
   search: z
@@ -86,7 +88,7 @@ const JobTable = () => {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  let bottomElRef: HTMLTableRowElement | undefined;
+  let bottomElRef: HTMLTableSectionElement | undefined;
 
   onMount(() => {
     const io = new IntersectionObserver(([entry]) => {
@@ -120,6 +122,14 @@ const JobTable = () => {
 
     onCleanup(() => controller.abort());
   });
+
+  if (!isServer) {
+    window.addEventListener('error', (event) => {
+      if (event.message === 'ResizeObserver loop completed with undelivered notifications.') {
+        event.stopImmediatePropagation();
+      }
+    });
+  }
 
   return (
     <main class="p-4 max-w-7xl mx-auto">
@@ -186,32 +196,47 @@ const JobTable = () => {
           ref={tableContainerRef}
           class="overflow-auto max-h-[75dvh] rounded-lg border border-gray-200"
         >
-          <table class="w-full">
-            <thead class="sticky top-0">
-              <tr class="bg-gray-50">
+          <table
+            class="w-full"
+            style={{
+              width: `${table.getTotalSize()}px`,
+            }}
+          >
+            <thead class="sticky top-0 z-10">
+              <tr class="bg-gray-50 text-sm">
                 <For each={table.getFlatHeaders()}>
                   {(header) => (
-                    <th class="whitespace-nowrap">
+                    <th
+                      // colSpan={header.colSpan}
+                      style={{ width: `${header.getSize()}px` }}
+                    >
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   )}
                 </For>
               </tr>
             </thead>
-            <tbody>
-              <For each={table.getRowModel().rows}>
-                {(row) => (
-                  <tr class="hover:bg-gray-50">
-                    <For each={row.getVisibleCells()}>
-                      {(cell) => (
-                        <td>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                      )}
-                    </For>
-                  </tr>
-                )}
-              </For>
-              <tr ref={bottomElRef} />
-            </tbody>
+
+            <Virtualizer
+              scrollRef={tableContainerRef}
+              startMargin={24} // table header height
+              data={table.getRowModel().rows}
+              as="tbody"
+              item="tr"
+              // itemSize={80}
+            >
+              {(row) => (
+                <For each={row.getVisibleCells()}>
+                  {(cell) => (
+                    <td class="text-sm" style={{ width: `${cell.column.getSize()}px` }}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  )}
+                </For>
+              )}
+            </Virtualizer>
+
+            <tfoot ref={bottomElRef} class="w-full" />
           </table>
         </div>
       </div>

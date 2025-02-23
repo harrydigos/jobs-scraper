@@ -9,38 +9,59 @@ export const defaultColumns: ColumnDef<Job>[] = [
   {
     accessorKey: 'id',
     header: () => 'ID',
+    size: 120,
   },
   {
     accessorKey: 'createdAt',
     header: () => 'Created At',
+    size: 250,
   },
   {
     accessorKey: 'updatedAt',
     header: () => 'Updated At',
+    size: 250,
   },
   {
     accessorKey: 'title',
     header: () => 'Job Title',
+    size: 500,
+    cell: (info) => {
+      const value = info.getValue() as string;
+      return value.length > 50 ? value.slice(0, 50) : value;
+    },
   },
   {
     accessorKey: 'company',
     header: () => 'Company',
+    size: 250,
+    cell: (info) => {
+      const value = info.getValue() as string;
+      return value.length > 40 ? value.slice(0, 40) : value;
+    },
   },
   {
     accessorKey: 'remote',
     header: () => 'Remote',
+    size: 120,
   },
   {
     accessorKey: 'location',
     header: () => 'Location',
+    size: 300,
+    cell: (info) => {
+      const value = info.getValue() as string;
+      return value.length > 30 ? value.slice(0, 30) : value;
+    },
   },
   {
     accessorKey: 'timeSincePosted',
     header: () => 'Time Since Posted',
+    size: 400,
   },
   {
     accessorKey: 'companySize',
     header: () => 'Company Size',
+    size: 120,
   },
   {
     accessorKey: 'link',
@@ -55,5 +76,6 @@ export const defaultColumns: ColumnDef<Job>[] = [
         </Show>
       );
     },
+    size: 120,
   },
 ];
