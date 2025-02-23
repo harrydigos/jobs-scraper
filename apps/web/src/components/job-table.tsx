@@ -1,98 +1,11 @@
 import { debounce } from '@solid-primitives/scheduled';
-import { createAsync, query, useSearchParams } from '@solidjs/router';
-import { ColumnDef, createSolidTable, flexRender, getCoreRowModel } from '@tanstack/solid-table';
-import { and, between, db, desc, getAllJobsCount, type Job, jobs, like, lt, or } from 'database';
+import { createAsync, useSearchParams } from '@solidjs/router';
+import { createSolidTable, flexRender, getCoreRowModel } from '@tanstack/solid-table';
+import type { Job } from 'database';
 import { For, Show, createMemo, createResource, createSignal, onCleanup, onMount } from 'solid-js';
 import { z } from 'zod';
-
-const urlSchema = z.string().url();
-
-const getJobs = query(
-  async (search: string, startDate: string, endDate: string, cursor: string | null = null) => {
-    'use server';
-    search = `%${search.toLowerCase()}%`;
-
-    // TODO: add a date lib bc this is hell
-    const start = startDate
-      ? new Date(new Date(startDate).setHours(0, 0, 0, 0)).toISOString()
-      : new Date(1970, 0, 1).toISOString();
-    const end = endDate
-      ? new Date(new Date(endDate).setHours(23, 59, 59, 999)).toISOString()
-      : new Date(new Date().setFullYear(new Date().getFullYear() + 100)).toISOString();
-
-    const query = db
-      .select()
-      .from(jobs)
-      .where(
-        and(
-          cursor ? lt(jobs.updatedAt, cursor) : undefined,
-          or(like(jobs.title, search), like(jobs.company, search)),
-          between(jobs.updatedAt, start, end),
-        ),
-      );
-
-    return await query.limit(25).orderBy(desc(jobs.updatedAt));
-  },
-  'jobs',
-);
-
-const totalJobs = query(async () => {
-  'use server';
-  return await getAllJobsCount();
-}, 'jobs-count');
-
-const defaultColumns: ColumnDef<Job>[] = [
-  {
-    accessorKey: 'id',
-    header: () => 'ID',
-  },
-  {
-    accessorKey: 'createdAt',
-    header: () => 'Created At',
-  },
-  {
-    accessorKey: 'updatedAt',
-    header: () => 'Updated At',
-  },
-  {
-    accessorKey: 'title',
-    header: () => 'Job Title',
-  },
-  {
-    accessorKey: 'company',
-    header: () => 'Company',
-  },
-  {
-    accessorKey: 'remote',
-    header: () => 'Remote',
-  },
-  {
-    accessorKey: 'location',
-    header: () => 'Location',
-  },
-  {
-    accessorKey: 'timeSincePosted',
-    header: () => 'Time Since Posted',
-  },
-  {
-    accessorKey: 'companySize',
-    header: () => 'Company Size',
-  },
-  {
-    accessorKey: 'link',
-    header: () => 'Link',
-    cell: (info) => {
-      const validationResult = urlSchema.safeParse(info.getValue());
-      return (
-        <Show when={validationResult.success} fallback="-">
-          <a href={validationResult.data} target="_blank" rel="noopener noreferrer">
-            Link
-          </a>
-        </Show>
-      );
-    },
-  },
-];
+import { getJobs, getTotalJobs } from '~/lib/queries';
+import { defaultColumns } from './columns';
 
 const searchParamsSchema = z.object({
   search: z
@@ -160,7 +73,7 @@ const JobTable = () => {
     return prev;
   }, tableData() || []);
 
-  const totalJobsCount = createAsync(() => totalJobs());
+  const totalJobsCount = createAsync(() => getTotalJobs());
 
   const table = createSolidTable({
     get data() {
