@@ -222,7 +222,7 @@ const JobTable = () => {
               startMargin={24} // table header height
               data={table.getRowModel().rows}
               as="tbody"
-              item="tr"
+              item={(props) => <tr class="hover:bg-gray-100" {...props} />}
               // itemSize={80}
             >
               {(row) => (
