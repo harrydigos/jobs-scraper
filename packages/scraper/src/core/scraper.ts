@@ -22,7 +22,7 @@ const logger = createLogger({
 const scrapedJobIds = new Set<string>();
 const activeSearches = new Set<number>();
 
-export class LinkedInScraper {
+export class Scraper {
   #browser: Browser | null = null;
   #page: Page | null = null;
   #scraperOptions: Pick<ScraperOptions, 'liAtCookie'> = { liAtCookie: '' };
@@ -42,7 +42,7 @@ export class LinkedInScraper {
   }
 
   static async initialize(opts: ScraperOptions) {
-    const scraper = new LinkedInScraper(opts);
+    const scraper = new Scraper(opts);
 
     // Private names are shared between all instances of a given class
     if (!scraper.#scraperOptions.liAtCookie) {
@@ -410,7 +410,7 @@ export class LinkedInScraper {
       await sleep(getRandomArbitrary(2000, 5000));
 
       try {
-        const scraper = await LinkedInScraper.initialize(this.#scraperOptions);
+        const scraper = await Scraper.initialize(this.#scraperOptions);
         scraper.#searchOptions = this.#searchOptions;
 
         try {

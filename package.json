@@ -1,5 +1,5 @@
 {
-  "name": "linkedin-job-scraper",
+  "name": "job-scraper",
   "private": true,
   "scripts": {
     "build": "turbo build",

@@ -1,5 +1,5 @@
 import { db, jobs } from 'database';
-import { Job, LinkedInScraper } from 'scraper';
+import { Job, Scraper } from 'scraper';
 
 function getJobIds() {
   return db.select({ id: jobs.id }).from(jobs);
@@ -22,7 +22,7 @@ async function main() {
   const jobIds = await getJobIds().then((jobs) => jobs.map((j) => j.id));
 
   try {
-    const scraper = await LinkedInScraper.initialize({
+    const scraper = await Scraper.initialize({
       liAtCookie: process.env.LI_AT_COOKIE!,
       scrapedJobIds: jobIds,
       browserOptions: { headless: true },

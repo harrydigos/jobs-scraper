@@ -1,6 +1,6 @@
 import path from 'path';
 
-const PROJECT_ROOT = 'linkedin-job-scraper';
+const PROJECT_ROOT = 'job-scraper';
 const DB_RELATIVE_PATH = ['packages', 'database', 'sqlite3.db'];
 
 export function getDbPath() {
