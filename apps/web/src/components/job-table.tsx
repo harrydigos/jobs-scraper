@@ -39,7 +39,7 @@ const JobTable = () => {
     setSearchParams(params, { replace: true, scroll: true });
   };
 
-  const throttledSearch = debounce((search: string) => {
+  const debouncedSearch = debounce((search: string) => {
     updateSearchFilters({
       search: search.trim(),
     });
@@ -144,7 +144,7 @@ const JobTable = () => {
               onInput={(e) => {
                 const value = e.target.value;
                 setSearch(value);
-                throttledSearch(value);
+                debouncedSearch(value);
               }}
               class="w-full px-4 py-2 border border-gray-200 rounded-md text-sm placeholder-gray-400"
             />

@@ -1,18 +1,18 @@
 import { query } from '@solidjs/router';
 import { and, between, db, desc, getAllJobsCount, jobs, like, lt, or } from 'database';
+import dayjs from 'dayjs';
 
 export const getJobs = query(
   async (search: string, startDate: string, endDate: string, cursor: string | null = null) => {
     'use server';
     search = `%${search.toLowerCase()}%`;
 
-    // TODO: add a date lib bc this is hell
     const start = startDate
-      ? new Date(new Date(startDate).setHours(0, 0, 0, 0)).toISOString()
-      : new Date(1970, 0, 1).toISOString();
+      ? dayjs(startDate).startOf('day').toISOString()
+      : dayjs('1970-01-01').toISOString();
     const end = endDate
-      ? new Date(new Date(endDate).setHours(23, 59, 59, 999)).toISOString()
-      : new Date(new Date().setFullYear(new Date().getFullYear() + 100)).toISOString();
+      ? dayjs(endDate).endOf('day').toISOString()
+      : dayjs().add(1, 'week').toISOString();
 
     const query = db
       .select()
