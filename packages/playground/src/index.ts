@@ -1,4 +1,4 @@
-import { db, jobs } from 'database';
+import { db, jobs, sql } from 'database';
 import { Job, Scraper } from 'scraper';
 
 function getJobIds() {
@@ -12,7 +12,7 @@ async function createJob(job: Job) {
     .onConflictDoUpdate({
       target: jobs.id,
       set: {
-        updatedAt: new Date().toISOString(),
+        updatedAt: sql`CURRENT_TIMESTAMP`,
         timeSincePosted: jobs.timeSincePosted,
       },
     });
