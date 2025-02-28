@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 const urlSchema = z.string().url();
 
-export const defaultColumns: ColumnDef<Job>[] = [
+export const defaultColumns = [
   {
     accessorKey: 'id',
     header: () => 'ID',
@@ -78,4 +78,4 @@ export const defaultColumns: ColumnDef<Job>[] = [
     },
     size: 120,
   },
-];
+] satisfies ColumnDef<Job>[];
