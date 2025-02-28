@@ -1,31 +1,46 @@
 import { createAsync, useSearchParams } from '@solidjs/router';
-import { createSolidTable, flexRender, getCoreRowModel } from '@tanstack/solid-table';
+import { createSolidTable, flexRender, getCoreRowModel, Header } from '@tanstack/solid-table';
 import type { Job } from 'database';
-import { For, Show, createMemo, createResource, createSignal, onCleanup, onMount } from 'solid-js';
+import {
+  For,
+  createMemo,
+  createResource,
+  createSignal,
+  onCleanup,
+  onMount,
+  untrack,
+} from 'solid-js';
 import { getJobs, getTotalJobs } from '~/lib/queries';
 import { defaultColumns } from './columns';
 import { Virtualizer } from 'virtua/solid';
-import { isServer } from 'solid-js/web';
-import { createDraggable } from '@neodrag/solid';
+import { createDraggable, DragEventData } from '@neodrag/solid';
 import { Filters } from './filters';
-import { SearchParams, searchParamsSchema } from './utils';
+import {
+  ignoreResizeObserverError,
+  isOrderChanged,
+  SearchParams,
+  searchParamsSchema,
+} from './utils';
 import { Search } from './search';
+import { throttle } from '@solid-primitives/scheduled';
 
 export function JobTable() {
+  let tableContainerRef: HTMLDivElement | undefined;
+  let bottomElRef: HTMLTableSectionElement | undefined;
+
   const [searchParams, setSearchParams] = useSearchParams<SearchParams>();
   const [nextCursor, setNextCursor] = createSignal<string | null>(null);
-
-  const updateSearchFilters = (params: Partial<SearchParams>) => {
-    tableContainerRef?.scrollTo({ top: 0 });
-    setNextCursor(null);
-    setSearchParams(params, { replace: true, scroll: true });
-  };
-
-  let tableContainerRef: HTMLDivElement | undefined;
+  const [isDragging, setIsDragging] = createSignal(false);
+  const [dropPosition, setDropPosition] = createSignal<{
+    index: number;
+    direction: 'left' | 'right';
+  } | null>(null);
 
   const { draggable } = createDraggable();
 
-  const [tableData] = createResource(
+  const totalJobsCount = createAsync(() => getTotalJobs());
+
+  const [tableData] = createResource<Array<Job>, Array<string | null | undefined>>(
     () => [searchParams.search, searchParams.startDate, searchParams.endDate, nextCursor()],
     async ([search, startDate, endDate, cursor]) => {
       const validatedParams = searchParamsSchema.parse({
@@ -42,8 +57,6 @@ export function JobTable() {
       );
     },
   );
-
-  const totalJobsCount = createAsync(() => getTotalJobs());
 
   const jobsData = createMemo<Job[]>((prev) => {
     if (tableData.state === 'errored') {
@@ -68,8 +81,6 @@ export function JobTable() {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  let bottomElRef: HTMLTableSectionElement | undefined;
-
   onMount(() => {
     const io = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting && tableData.state === 'ready') {
@@ -85,18 +96,63 @@ export function JobTable() {
     onCleanup(() => io.disconnect());
   });
 
-  if (!isServer) {
-    window.addEventListener('error', (event) => {
-      if (event.message === 'ResizeObserver loop completed with undelivered notifications.') {
-        event.stopImmediatePropagation();
-      }
-    });
-  }
+  ignoreResizeObserverError();
 
-  const [dropPosition, setDropPosition] = createSignal<{
-    index: number;
-    direction: 'left' | 'right';
-  } | null>(null);
+  const updateSearchFilters = (params: Partial<SearchParams>) => {
+    tableContainerRef?.scrollTo({ top: 0 });
+    setNextCursor(null);
+    setSearchParams(params, { replace: true, scroll: true });
+  };
+
+  const calculateTargetIndex = (finalPosition: number) => {
+    const { targetIndex } = table.getFlatHeaders().reduce(
+      (acc, h, index) => {
+        const distance = Math.abs(h.getStart() + h.getSize() / 2 - finalPosition);
+        if (distance < acc.minDistance) {
+          return { minDistance: distance, targetIndex: index };
+        }
+        return acc;
+      },
+      { minDistance: Infinity, targetIndex: 0 },
+    );
+
+    return targetIndex;
+  };
+
+  const handleDrag = throttle((header: Header<Job, Job>, data: DragEventData) => {
+    if (untrack(() => !isDragging())) {
+      return;
+    }
+
+    const finalPosition = header.getStart() + data.offsetX + header.getSize() / 2;
+    const headers = table.getFlatHeaders();
+    const targetIndex = calculateTargetIndex(finalPosition);
+
+    const newOrder = headers.map((h) => h.id).toSpliced(header.index, 1);
+    newOrder.splice(targetIndex, 0, header.id);
+
+    if (!isOrderChanged(headers, newOrder)) {
+      setDropPosition(null);
+      return;
+    }
+
+    setDropPosition({
+      index: targetIndex,
+      direction: header.getStart() > headers[targetIndex].getStart() ? 'left' : 'right',
+    });
+  }, 150);
+
+  const handleDragEnd = (header: Header<Job, Job>, data: DragEventData) => {
+    setDropPosition(null);
+    setIsDragging(false);
+    const headers = table.getFlatHeaders();
+    const finalPosition = header.getStart() + data.offsetX + header.getSize() / 2;
+    const targetIndex = calculateTargetIndex(finalPosition);
+
+    const newOrder = headers.map((h) => h.id).toSpliced(header.index, 1);
+    newOrder.splice(targetIndex, 0, header.id);
+    table.setColumnOrder(newOrder);
+  };
 
   return (
     <main class="p-4 max-w-7xl mx-auto">
@@ -124,126 +180,27 @@ export function JobTable() {
               <tr class="bg-gray-50 text-sm">
                 <For each={table.getFlatHeaders()}>
                   {(header) => (
-                    <>
-                      <Show
-                        when={
+                    <th
+                      use:draggable={{
+                        axis: 'x',
+                        bounds: 'parent',
+                        onDragStart: () => setIsDragging(true),
+                        onDrag: (data) => handleDrag(header, data),
+                        onDragEnd: (data) => handleDragEnd(header, data),
+                      }}
+                      class="active:bg-blue-500/50"
+                      classList={{
+                        'before:content-[""] before:absolute before:left-0 before:w-[3px] before:h-full before:bg-blue-500 before:z-20':
                           dropPosition()?.index === header.index &&
-                          dropPosition()?.direction === 'left'
-                        }
-                      >
-                        <th class="w-[3px] h-full bg-blue-500 z-20" />
-                      </Show>
-
-                      <th
-                        use:draggable={{
-                          axis: 'x',
-                          bounds: 'parent',
-                          onDrag: (data) => {
-                            const finalPosition =
-                              header.getStart() + data.offsetX + header.getSize() / 2;
-
-                            const headers = table.getFlatHeaders();
-
-                            let targetIndex = 0;
-                            let minDistance = Infinity;
-
-                            headers.forEach((h, index) => {
-                              const columnCenter = h.getStart() + h.getSize() / 2;
-                              const distance = Math.abs(columnCenter - finalPosition);
-
-                              if (distance < minDistance) {
-                                minDistance = distance;
-                                targetIndex = index;
-                              }
-                            });
-
-                            // if (targetIndex !== header.index) {
-                            const newOrder = [...headers.map((h) => h.id)];
-
-                            newOrder.splice(header.index, 1);
-                            newOrder.splice(targetIndex, 0, header.id);
-
-                            function isOrderChanged(
-                              headers: Array<{ id: string }>,
-                              newOrder: Array<string>,
-                            ): boolean {
-                              if (headers.length !== newOrder.length) {
-                                return true;
-                              }
-
-                              for (let i = 0; i < headers.length; i++) {
-                                if (headers[i].id !== newOrder[i]) {
-                                  return true;
-                                }
-                              }
-
-                              return false;
-                            }
-
-                            if (!isOrderChanged(headers, newOrder)) {
-                              setDropPosition(null);
-                              return;
-                            }
-
-                            setDropPosition({
-                              // x: headers[targetIndex].getStart(),
-                              index: targetIndex,
-                              direction:
-                                header.getStart() > headers[targetIndex].getStart()
-                                  ? 'left'
-                                  : 'right',
-                            });
-                          },
-                          onDragEnd: (data) => {
-                            setDropPosition(null);
-
-                            const headers = table.getFlatHeaders();
-                            const currentOrder = headers.map((h) => h.id);
-
-                            const draggedOriginalPosition = header.getStart();
-                            const finalPosition =
-                              draggedOriginalPosition + data.offsetX + header.getSize() / 2;
-
-                            // Find which column position this is closest to
-                            let targetIndex = 0;
-                            let minDistance = Infinity;
-
-                            headers.forEach((h, index) => {
-                              // Calculate center point of each column
-                              const columnCenter = h.getStart() + h.getSize() / 2;
-                              const distance = Math.abs(columnCenter - finalPosition);
-
-                              if (distance < minDistance) {
-                                minDistance = distance;
-                                targetIndex = index;
-                              }
-                            });
-
-                            const newOrder = [...currentOrder];
-
-                            newOrder.splice(header.index, 1);
-                            newOrder.splice(targetIndex, 0, header.id);
-
-                            console.log({ newOrder });
-
-                            table.setColumnOrder(newOrder);
-                          },
-                        }}
-                        class="active:bg-blue-500/50"
-                        style={{ width: `${header.getSize()}px` }}
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
-
-                      <Show
-                        when={
+                          dropPosition()?.direction === 'left',
+                        'after:content-[""] after:absolute after:right-0 after:w-[3px] after:h-full after:bg-blue-500 after:z-20':
                           dropPosition()?.index === header.index &&
-                          dropPosition()?.direction === 'right'
-                        }
-                      >
-                        <th class="w-[3px] h-full bg-blue-500 z-20" />
-                      </Show>
-                    </>
+                          dropPosition()?.direction === 'right',
+                      }}
+                      style={{ width: `${header.getSize()}px` }}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </th>
                   )}
                 </For>
               </tr>

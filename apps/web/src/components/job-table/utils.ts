@@ -1,3 +1,6 @@
+import { Header } from '@tanstack/solid-table';
+import { Job } from 'database';
+import { isServer } from 'solid-js/web';
 import { z } from 'zod';
 
 export const searchParamsSchema = z.object({
@@ -16,3 +19,27 @@ export const searchParamsSchema = z.object({
 });
 
 export type SearchParams = z.infer<typeof searchParamsSchema>;
+
+export function ignoreResizeObserverError() {
+  if (!isServer) {
+    window.addEventListener('error', (event) => {
+      if (event.message === 'ResizeObserver loop completed with undelivered notifications.') {
+        event.stopImmediatePropagation();
+      }
+    });
+  }
+}
+
+export function isOrderChanged(headers: Array<Header<Job, Job>>, newOrder: Array<string>) {
+  if (headers.length !== newOrder.length) {
+    return true;
+  }
+
+  for (let i = 0; i < headers.length; i++) {
+    if (headers[i].id !== newOrder[i]) {
+      return true;
+    }
+  }
+
+  return false;
+}
