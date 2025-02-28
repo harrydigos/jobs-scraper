@@ -5,65 +5,70 @@ import { z } from 'zod';
 
 const urlSchema = z.string().url();
 
+function truncate(value: string, maxLength: number) {
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
+}
+
 export const defaultColumns = [
   {
+    id: 'id',
     accessorKey: 'id',
     header: () => 'ID',
     size: 120,
   },
   {
+    id: 'createdAt',
     accessorKey: 'createdAt',
     header: () => 'Created At',
     size: 250,
   },
   {
+    id: 'updatedAt',
     accessorKey: 'updatedAt',
     header: () => 'Updated At',
     size: 250,
   },
   {
+    id: 'title',
     accessorKey: 'title',
     header: () => 'Job Title',
-    size: 500,
-    cell: (info) => {
-      const value = info.getValue() as string;
-      return value.length > 50 ? value.slice(0, 50) : value;
-    },
+    size: 360,
+    cell: (info) => truncate(info.getValue<string>(), 50).toLowerCase(),
   },
   {
+    id: 'company',
     accessorKey: 'company',
     header: () => 'Company',
     size: 250,
-    cell: (info) => {
-      const value = info.getValue() as string;
-      return value.length > 40 ? value.slice(0, 40) : value;
-    },
+    cell: (info) => truncate(info.getValue<string>(), 30),
   },
   {
+    id: 'remote',
     accessorKey: 'remote',
     header: () => 'Remote',
-    size: 120,
+    size: 80,
   },
   {
+    id: 'location',
     accessorKey: 'location',
     header: () => 'Location',
-    size: 300,
-    cell: (info) => {
-      const value = info.getValue() as string;
-      return value.length > 30 ? value.slice(0, 30) : value;
-    },
+    size: 250,
+    cell: (info) => truncate(info.getValue<string>(), 30),
   },
   {
+    id: 'timeSincePosted',
     accessorKey: 'timeSincePosted',
     header: () => 'Time Since Posted',
-    size: 400,
+    size: 160,
   },
   {
+    id: 'companySize',
     accessorKey: 'companySize',
     header: () => 'Company Size',
     size: 120,
   },
   {
+    id: 'link',
     accessorKey: 'link',
     header: () => 'Link',
     cell: (info) => {
@@ -76,6 +81,6 @@ export const defaultColumns = [
         </Show>
       );
     },
-    size: 120,
+    size: 60,
   },
 ] satisfies ColumnDef<Job>[];
