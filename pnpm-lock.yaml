@@ -44,6 +44,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@neodrag/solid':
+        specifier: ^2.3.0
+        version: 2.3.0(solid-js@1.9.5)
       '@solid-primitives/scheduled':
         specifier: ^1.5.0
         version: 1.5.0(solid-js@1.9.5)
@@ -1054,6 +1057,11 @@ packages:
     resolution: {integrity: sha512-llMXd39jtP0HpQLVI37Bf1m2ADlEb35GYSh1SDSLsBhR+5iCxiNGlT31yqbNtVHygHAtMy6dWFERpU2JgufhPg==}
     engines: {node: '>=18'}
     hasBin: true
+
+  '@neodrag/solid@2.3.0':
+    resolution: {integrity: sha512-j6EAqCx3NbFNv3NiutPLudLmYBfcRGZoezAvODwwmMtEl4BR+i3n5PhxQCbc5rsw8Zf6AoOW7TJ3onah291v8w==}
+    peerDependencies:
+      solid-js: ^1.0.0
 
   '@netlify/functions@2.8.2':
     resolution: {integrity: sha512-DeoAQh8LuNPvBE4qsKlezjKj0PyXDryOFJfJKo3Z1qZLKzQ21sT314KQKPVjfvw6knqijj+IO+0kHXy/TJiqNA==}
@@ -4772,6 +4780,10 @@ snapshots:
     transitivePeerDependencies:
       - encoding
       - supports-color
+
+  '@neodrag/solid@2.3.0(solid-js@1.9.5)':
+    dependencies:
+      solid-js: 1.9.5
 
   '@netlify/functions@2.8.2':
     dependencies:
