@@ -9,11 +9,11 @@
     "playwright"
   ],
   "bugs": {
-    "url": "https://github.com/harrydigos/job-scraper/issues"
+    "url": "https://github.com/harrydigos/jobs-scraper/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/harrydigos/job-scraper.git"
+    "url": "git+https://github.com/harrydigos/jobs-scraper.git"
   },
   "private": false,
   "type": "module",
