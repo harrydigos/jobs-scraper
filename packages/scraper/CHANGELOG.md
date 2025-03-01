@@ -1,5 +1,11 @@
 # jobs-scraper
 
+## 0.0.2
+
+### Patch Changes
+
+- 71f4f7d: Add readme, package url
+
 ## 0.0.1
 
 ### Patch Changes
