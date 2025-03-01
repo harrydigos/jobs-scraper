@@ -1,5 +1,11 @@
 # jobs-scraper
 
+## 0.0.3
+
+### Patch Changes
+
+- 9c746f3: Change git url
+
 ## 0.0.2
 
 ### Patch Changes
