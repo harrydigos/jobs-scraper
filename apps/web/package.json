@@ -6,6 +6,7 @@
     "build": "vinxi build",
     "start": "vinxi start"
   },
+  "private": true,
   "dependencies": {
     "@neodrag/solid": "^2.3.0",
     "@solid-primitives/scheduled": "^1.5.0",
