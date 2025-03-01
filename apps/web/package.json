@@ -1,5 +1,5 @@
 {
-  "name": "web",
+  "name": "@jobs-scraper/web",
   "type": "module",
   "scripts": {
     "web:dev": "vinxi dev",

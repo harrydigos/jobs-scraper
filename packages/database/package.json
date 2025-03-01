@@ -1,5 +1,5 @@
 {
-  "name": "database",
+  "name": "@jobs-scraper/database",
   "version": "0.0.0",
   "private": true,
   "main": "dist/src/index.js",

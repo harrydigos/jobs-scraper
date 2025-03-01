@@ -1,5 +1,5 @@
 {
-  "name": "job-scraper",
+  "name": "@jobs-scraper/monorepo",
   "private": true,
   "scripts": {
     "build": "turbo build",
@@ -13,7 +13,11 @@
     "scraper:dev": "turbo run scraper#dev",
     "scraper:build": "turbo run scraper#build",
     "web:dev": "turbo run web:dev",
-    "playground:start": "dotenv -- turbo run playground:start"
+    "playground:start": "dotenv -- turbo run playground:start",
+    "publish-packages": "turbo run build lint && changeset version && changeset publish"
+  },
+  "dependencies": {
+    "@changesets/cli": "^2.28.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
