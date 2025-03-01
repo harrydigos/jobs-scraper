@@ -8,6 +8,13 @@
     "jobs",
     "playwright"
   ],
+  "bugs": {
+    "url": "https://github.com/harrydigos/job-scraper/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harrydigos/job-scraper.git"
+  },
   "private": false,
   "type": "module",
   "main": "./dist/index.cjs",
