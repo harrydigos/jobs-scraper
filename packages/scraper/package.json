@@ -1,11 +1,23 @@
 {
-  "name": "scraper",
+  "name": "jobs-scraper",
   "version": "0.0.0",
-  "private": true,
+  "author": "Harry Digos",
+  "license": "MIT",
+  "keywords": [
+    "scraper",
+    "jobs",
+    "playwright"
+  ],
+  "private": false,
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -17,9 +29,6 @@
     "build": "tsup",
     "dev": "tsup --watch"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
     "@types/node": "^22.10.5",
     "tsup": "^8.4.0",
