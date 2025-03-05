@@ -1,5 +1,15 @@
 import { query } from '@solidjs/router';
-import { and, between, db, desc, getAllJobsCount, jobs, like, lt, or } from 'database';
+import {
+  and,
+  between,
+  db,
+  desc,
+  getAllJobsCount,
+  jobs,
+  like,
+  lt,
+  or,
+} from '@jobs-scraper/database';
 import dayjs from 'dayjs';
 
 export const getJobs = query(

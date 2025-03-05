@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'fs/promises';
 import { parse } from 'csv-parse';
-import type { Job } from 'database';
+import type { Job } from '@jobs-scraper/database';
 
 const allFields = [
   'id',

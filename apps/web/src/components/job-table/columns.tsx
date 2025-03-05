@@ -1,5 +1,5 @@
 import type { ColumnDef } from '@tanstack/solid-table';
-import type { Job } from 'database';
+import type { Job } from '@jobs-scraper/database';
 import { Show } from 'solid-js';
 import { z } from 'zod';
 

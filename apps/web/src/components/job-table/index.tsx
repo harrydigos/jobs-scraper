@@ -1,6 +1,6 @@
 import { createAsync, useSearchParams } from '@solidjs/router';
 import { createSolidTable, flexRender, getCoreRowModel, Header } from '@tanstack/solid-table';
-import type { Job } from 'database';
+import type { Job } from '@jobs-scraper/database';
 import {
   For,
   createMemo,

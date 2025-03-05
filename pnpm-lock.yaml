@@ -48,6 +48,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@jobs-scraper/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@neodrag/solid':
         specifier: ^2.3.0
         version: 2.3.0(solid-js@1.9.5)
@@ -63,9 +66,6 @@ importers:
       '@tanstack/solid-table':
         specifier: ^8.20.5
         version: 8.21.2(solid-js@1.9.5)
-      database:
-        specifier: workspace:*
-        version: link:../../packages/database
       dayjs:
         specifier: ^1.11.13
         version: 1.11.13
@@ -110,18 +110,18 @@ importers:
 
   packages/playground:
     dependencies:
+      '@jobs-scraper/database':
+        specifier: workspace:*
+        version: link:../database
       csv-parse:
         specifier: ^5.6.0
         version: 5.6.0
-      database:
+      jobs-scraper:
         specifier: workspace:*
-        version: link:../database
+        version: link:../scraper
       playwright:
         specifier: ^1.49.1
         version: 1.50.1
-      scraper:
-        specifier: workspace:*
-        version: link:../scraper
     devDependencies:
       '@types/node':
         specifier: ^22.10.5

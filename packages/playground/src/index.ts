@@ -1,5 +1,5 @@
-import { db, jobs, sql } from 'database';
-import { Job, Scraper } from 'scraper';
+import { db, jobs, sql } from '@jobs-scraper/database';
+import { Job, Scraper } from 'jobs-scraper';
 
 function getJobIds() {
   return db.select({ id: jobs.id }).from(jobs);

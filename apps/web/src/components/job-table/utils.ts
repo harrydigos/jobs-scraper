@@ -1,5 +1,5 @@
+import { Job } from '@jobs-scraper/database';
 import { Header } from '@tanstack/solid-table';
-import { Job } from 'database';
 import { isServer } from 'solid-js/web';
 import { z } from 'zod';
 

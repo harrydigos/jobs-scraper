@@ -11,9 +11,9 @@
   "author": "",
   "dependencies": {
     "csv-parse": "^5.6.0",
-    "database": "workspace:*",
+    "@jobs-scraper/database": "workspace:*",
     "playwright": "^1.49.1",
-    "scraper": "workspace:*"
+    "jobs-scraper": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
