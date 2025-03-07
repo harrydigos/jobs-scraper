@@ -35,7 +35,7 @@ export const getJobs = query(
         ),
       );
 
-    return await query.limit(25).orderBy(desc(jobs.updatedAt));
+    return await query.limit(50).orderBy(desc(jobs.updatedAt));
   },
   'jobs',
 );

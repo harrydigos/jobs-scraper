@@ -3,11 +3,11 @@ import { createSolidTable, flexRender, getCoreRowModel, Header } from '@tanstack
 import type { Job } from '@jobs-scraper/database';
 import {
   For,
+  createEffect,
   createMemo,
   createResource,
   createSignal,
   onCleanup,
-  onMount,
   untrack,
 } from 'solid-js';
 import { getJobs, getTotalJobs } from '~/lib/queries';
@@ -81,14 +81,14 @@ export function JobTable() {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  onMount(() => {
-    const io = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && tableData.state === 'ready') {
-        const lastJob = jobsData()?.at(-1);
+  const isReady = () => tableData.state === 'ready';
 
-        if (lastJob) {
-          setNextCursor(lastJob.updatedAt);
-        }
+  createEffect(() => {
+    const lastJob = jobsData()?.at(-1);
+
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && isReady() && lastJob) {
+        setNextCursor(lastJob.updatedAt);
       }
     });
 
@@ -151,6 +151,7 @@ export function JobTable() {
 
     const newOrder = headers.map((h) => h.id).toSpliced(header.index, 1);
     newOrder.splice(targetIndex, 0, header.id);
+
     table.setColumnOrder(newOrder);
   };
 
@@ -165,6 +166,8 @@ export function JobTable() {
             Showing {table.getRowCount()} of total {totalJobsCount()?.[0].count || 0}
           </div>
         </div>
+
+        {/* <Show when={!isReady()}>Loading...</Show> */}
 
         <div
           ref={tableContainerRef}
