@@ -23,6 +23,7 @@ export type SearchParams = z.infer<typeof searchParamsSchema>;
 export function ignoreResizeObserverError() {
   if (!isServer) {
     window.addEventListener('error', (event) => {
+      console.warn(event);
       if (event.message === 'ResizeObserver loop completed with undelivered notifications.') {
         event.stopImmediatePropagation();
       }

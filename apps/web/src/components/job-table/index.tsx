@@ -11,7 +11,7 @@ import {
   untrack,
 } from 'solid-js';
 import { getJobs, getTotalJobs } from '~/lib/queries';
-import { defaultColumns } from './columns';
+import { columnOrder, defaultColumns, setColumnOrder } from './columns';
 import { Virtualizer } from 'virtua/solid';
 import { createDraggable, DragEventData } from '@neodrag/solid';
 import { Filters } from './filters';
@@ -79,6 +79,9 @@ export function JobTable() {
     },
     columns: defaultColumns,
     getCoreRowModel: getCoreRowModel(),
+    initialState: {
+      columnOrder: columnOrder(),
+    },
   });
 
   const isReady = () => tableData.state === 'ready';
@@ -152,6 +155,7 @@ export function JobTable() {
     const newOrder = headers.map((h) => h.id).toSpliced(header.index, 1);
     newOrder.splice(targetIndex, 0, header.id);
 
+    setColumnOrder(newOrder);
     table.setColumnOrder(newOrder);
   };
 

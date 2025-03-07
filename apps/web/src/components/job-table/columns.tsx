@@ -1,7 +1,8 @@
 import type { ColumnDef } from '@tanstack/solid-table';
 import type { Job } from '@jobs-scraper/database';
-import { Show } from 'solid-js';
+import { createSignal, Show } from 'solid-js';
 import { z } from 'zod';
+import { makePersisted } from '@solid-primitives/storage';
 
 const urlSchema = z.string().url();
 
@@ -84,3 +85,12 @@ export const defaultColumns = [
     size: 60,
   },
 ] satisfies ColumnDef<Job>[];
+
+export const [columnOrder, setColumnOrder] = makePersisted(
+  // eslint-disable-next-line solid/reactivity
+  createSignal(defaultColumns.map((c) => c.id)),
+  {
+    name: 'job-table-column-order',
+    storage: localStorage,
+  },
+);
