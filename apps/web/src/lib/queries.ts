@@ -14,7 +14,13 @@ import {
 import dayjs from 'dayjs';
 
 export const getJobs = query(
-  async (search: string, startDate: string, endDate: string, cursor: string | null = null) => {
+  async (
+    search: string,
+    startDate: string,
+    endDate: string,
+    cursor: string | null = null,
+    aggregated: string = 'false',
+  ) => {
     'use server';
     search = `%${search.toLowerCase()}%`;
 
@@ -25,15 +31,19 @@ export const getJobs = query(
       ? dayjs(endDate).endOf('day').toISOString()
       : dayjs().add(1, 'week').toISOString();
 
+    const isAggregated = aggregated === 'true';
+
     const query = db
       .select({
-        // TODO: aggregate the data of duplicate roles
-        isAggregated: sql<number>`case when count(${jobs.title}) > 1 then 1 else 0 end`,
+        // TODO: aggregate the data of duplicate jobs
+        isAggregated: isAggregated
+          ? sql<number>`case when count(${jobs.title}) > 1 then 1 else 0 end`
+          : sql<number>`0`,
         id: jobs.id,
         title: jobs.title,
         company: jobs.company,
-        createdAt: sql<string>`MAX(${jobs.createdAt})`,
-        updatedAt: sql<string>`MAX(${jobs.updatedAt})`,
+        createdAt: isAggregated ? sql<string>`MAX(${jobs.createdAt})` : jobs.createdAt,
+        updatedAt: isAggregated ? sql<string>`MAX(${jobs.updatedAt})` : jobs.updatedAt,
         link: jobs.link,
         location: jobs.location,
         companySize: jobs.companySize,
@@ -60,8 +70,11 @@ export const getJobs = query(
         ),
       )
       .limit(50)
-      .orderBy(desc(jobs.updatedAt))
-      .groupBy(jobs.title, jobs.company);
+      .orderBy(desc(jobs.updatedAt));
+
+    if (isAggregated) {
+      query.groupBy(jobs.title, jobs.company);
+    }
 
     return await query;
   },

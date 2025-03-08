@@ -16,6 +16,10 @@ export const searchParamsSchema = z.object({
     .string()
     .optional()
     .transform((val) => (Array.isArray(val) || !val ? '' : new Date(val).toISOString())),
+  aggregated: z
+    .string()
+    .optional()
+    .transform((val) => (val !== 'true' ? 'false' : 'true')),
 });
 
 export type SearchParams = z.infer<typeof searchParamsSchema>;

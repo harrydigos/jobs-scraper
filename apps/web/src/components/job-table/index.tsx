@@ -40,20 +40,29 @@ export function JobTable() {
   const totalJobsCount = createAsync(() => getTotalJobs());
 
   const [tableData] = createResource<JobsResponse, Array<string | null | undefined>>(
-    () => [searchParams.search, searchParams.startDate, searchParams.endDate, nextCursor()],
-    async ([search, startDate, endDate, cursor]) => {
-      const validatedParams = searchParamsSchema.parse({
+    () => [
+      searchParams.search,
+      searchParams.startDate,
+      searchParams.endDate,
+      nextCursor(),
+      searchParams.aggregated,
+    ],
+    // @ts-expect-error fix ts issue
+    async ([search, startDate, endDate, cursor, aggregated]) => {
+      const validatedParams = searchParamsSchema.safeParse({
         search,
         startDate,
         endDate,
+        aggregated,
       });
 
-      return getJobs(
-        validatedParams.search,
-        validatedParams.startDate,
-        validatedParams.endDate,
-        cursor,
-      );
+      if (!validatedParams.success) {
+        console.error('Failed to parse params', { cause: validatedParams.error });
+        return;
+      }
+
+      const data = validatedParams.data;
+      return getJobs(data.search, data.startDate, data.endDate, cursor, data.aggregated);
     },
   );
 
