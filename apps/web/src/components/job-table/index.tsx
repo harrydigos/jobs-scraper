@@ -1,6 +1,5 @@
 import { createAsync, useSearchParams } from '@solidjs/router';
 import { createSolidTable, flexRender, getCoreRowModel, Header } from '@tanstack/solid-table';
-import type { Job } from '@jobs-scraper/database';
 import {
   For,
   createEffect,
@@ -10,7 +9,7 @@ import {
   onCleanup,
   untrack,
 } from 'solid-js';
-import { getJobs, getTotalJobs } from '~/lib/queries';
+import { getJobs, getTotalJobs, JobsResponse } from '~/lib/queries';
 import { columnOrder, defaultColumns, setColumnOrder } from './columns';
 import { Virtualizer } from 'virtua/solid';
 import { createDraggable, DragEventData } from '@neodrag/solid';
@@ -40,7 +39,7 @@ export function JobTable() {
 
   const totalJobsCount = createAsync(() => getTotalJobs());
 
-  const [tableData] = createResource<Array<Job>, Array<string | null | undefined>>(
+  const [tableData] = createResource<JobsResponse, Array<string | null | undefined>>(
     () => [searchParams.search, searchParams.startDate, searchParams.endDate, nextCursor()],
     async ([search, startDate, endDate, cursor]) => {
       const validatedParams = searchParamsSchema.parse({
@@ -58,7 +57,7 @@ export function JobTable() {
     },
   );
 
-  const jobsData = createMemo<Job[]>((prev) => {
+  const jobsData = createMemo<JobsResponse>((prev) => {
     if (tableData.state === 'errored') {
       return [];
     }
@@ -122,30 +121,33 @@ export function JobTable() {
     return targetIndex;
   };
 
-  const handleDrag = throttle((header: Header<Job, Job>, data: DragEventData) => {
-    if (untrack(() => !isDragging())) {
-      return;
-    }
+  const handleDrag = throttle(
+    (header: Header<JobsResponse[0], JobsResponse[0]>, data: DragEventData) => {
+      if (untrack(() => !isDragging())) {
+        return;
+      }
 
-    const finalPosition = header.getStart() + data.offsetX + header.getSize() / 2;
-    const headers = table.getFlatHeaders();
-    const targetIndex = calculateTargetIndex(finalPosition);
+      const finalPosition = header.getStart() + data.offsetX + header.getSize() / 2;
+      const headers = table.getFlatHeaders();
+      const targetIndex = calculateTargetIndex(finalPosition);
 
-    const newOrder = headers.map((h) => h.id).toSpliced(header.index, 1);
-    newOrder.splice(targetIndex, 0, header.id);
+      const newOrder = headers.map((h) => h.id).toSpliced(header.index, 1);
+      newOrder.splice(targetIndex, 0, header.id);
 
-    if (!isOrderChanged(headers, newOrder)) {
-      setDropPosition(null);
-      return;
-    }
+      if (!isOrderChanged(headers, newOrder)) {
+        setDropPosition(null);
+        return;
+      }
 
-    setDropPosition({
-      index: targetIndex,
-      direction: header.getStart() > headers[targetIndex].getStart() ? 'left' : 'right',
-    });
-  }, 150);
+      setDropPosition({
+        index: targetIndex,
+        direction: header.getStart() > headers[targetIndex].getStart() ? 'left' : 'right',
+      });
+    },
+    150,
+  );
 
-  const handleDragEnd = (header: Header<Job, Job>, data: DragEventData) => {
+  const handleDragEnd = (header: Header<JobsResponse[0], JobsResponse[0]>, data: DragEventData) => {
     setDropPosition(null);
     setIsDragging(false);
     const headers = table.getFlatHeaders();

@@ -9,6 +9,7 @@ import {
   like,
   lt,
   or,
+  sql,
 } from '@jobs-scraper/database';
 import dayjs from 'dayjs';
 
@@ -25,7 +26,31 @@ export const getJobs = query(
       : dayjs().add(1, 'week').toISOString();
 
     const query = db
-      .select()
+      .select({
+        // TODO: aggregate the data of duplicate roles
+        isAggregated: sql<number>`case when count(${jobs.title}) > 1 then 1 else 0 end`,
+        id: jobs.id,
+        title: jobs.title,
+        company: jobs.company,
+        createdAt: sql<string>`MAX(${jobs.createdAt})`,
+        updatedAt: sql<string>`MAX(${jobs.updatedAt})`,
+        link: jobs.link,
+        location: jobs.location,
+        companySize: jobs.companySize,
+        remote: jobs.remote,
+        timeSincePosted: jobs.timeSincePosted,
+
+        // TODO: these aren't used yet
+        // description: jobs.description,
+        // companyImgLink: jobs.companyImgLink,
+        // isPromoted: jobs.isPromoted,
+        // companyLink: jobs.companyLink,
+        // jobInsights: jobs.jobInsights,
+        // isReposted: jobs.isReposted,
+        // skillsRequired: jobs.skillsRequired,
+        // requirements: jobs.requirements,
+        // applyLink: jobs.applyLink,
+      })
       .from(jobs)
       .where(
         and(
@@ -33,12 +58,17 @@ export const getJobs = query(
           or(like(jobs.title, search), like(jobs.company, search)),
           between(jobs.updatedAt, start, end),
         ),
-      );
+      )
+      .limit(50)
+      .orderBy(desc(jobs.updatedAt))
+      .groupBy(jobs.title, jobs.company);
 
-    return await query.limit(50).orderBy(desc(jobs.updatedAt));
+    return await query;
   },
   'jobs',
 );
+
+export type JobsResponse = Awaited<ReturnType<typeof getJobs>>;
 
 export const getTotalJobs = query(async () => {
   'use server';

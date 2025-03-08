@@ -1,7 +1,7 @@
-import { Job } from '@jobs-scraper/database';
 import { Header } from '@tanstack/solid-table';
 import { isServer } from 'solid-js/web';
 import { z } from 'zod';
+import { JobsResponse } from '~/lib/queries';
 
 export const searchParamsSchema = z.object({
   search: z
@@ -31,7 +31,10 @@ export function ignoreResizeObserverError() {
   }
 }
 
-export function isOrderChanged(headers: Array<Header<Job, Job>>, newOrder: Array<string>) {
+export function isOrderChanged(
+  headers: Array<Header<JobsResponse[0], JobsResponse[0]>>,
+  newOrder: Array<string>,
+) {
   if (headers.length !== newOrder.length) {
     return true;
   }

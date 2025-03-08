@@ -1,8 +1,8 @@
 import type { ColumnDef } from '@tanstack/solid-table';
-import type { Job } from '@jobs-scraper/database';
 import { createSignal, Show } from 'solid-js';
 import { z } from 'zod';
 import { makePersisted } from '@solid-primitives/storage';
+import { JobsResponse } from '~/lib/queries';
 
 const urlSchema = z.string().url();
 
@@ -15,6 +15,10 @@ export const defaultColumns = [
     id: 'id',
     accessorKey: 'id',
     header: () => 'ID',
+    cell: (info) => {
+      const isAggregated = !!info.row.original.isAggregated;
+      return <>{isAggregated ? 'aggregated' : info.getValue()}</>;
+    },
     size: 120,
   },
   {
@@ -84,7 +88,7 @@ export const defaultColumns = [
     },
     size: 60,
   },
-] satisfies ColumnDef<Job>[];
+] satisfies ColumnDef<JobsResponse[0]>[];
 
 export const [columnOrder, setColumnOrder] = makePersisted(
   // eslint-disable-next-line solid/reactivity
