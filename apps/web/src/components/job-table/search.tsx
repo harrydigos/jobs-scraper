@@ -32,7 +32,7 @@ export function Search(props: { updateSearchFilters: (filters: Partial<SearchPar
   });
 
   return (
-    <div class="mb-4 relative">
+    <div class="relative mb-4">
       <input
         ref={searchInputRef}
         type="text"
@@ -43,9 +43,9 @@ export function Search(props: { updateSearchFilters: (filters: Partial<SearchPar
           setSearch(value);
           debouncedSearch(value);
         }}
-        class="w-full px-4 py-2 border border-gray-200 rounded-md text-sm placeholder-gray-400"
+        class="w-full rounded-md border border-gray-200 px-4 py-2 text-sm placeholder-gray-400"
       />
-      <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
+      <div class="absolute right-3 top-1/2 -translate-y-1/2 transform text-sm text-gray-400">
         ⌘K
       </div>
     </div>

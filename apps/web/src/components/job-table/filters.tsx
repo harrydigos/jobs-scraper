@@ -6,7 +6,7 @@ export function Filters(props: { updateSearchFilters: (filters: Partial<SearchPa
   const [searchParams] = useSearchParams<SearchParams>();
 
   return (
-    <div class="bg-white w-full flex gap-4 items-center justify-between">
+    <div class="flex w-full items-center justify-between gap-4 bg-white">
       <div class="flex items-center gap-4">
         <input
           type="date"
@@ -16,7 +16,7 @@ export function Filters(props: { updateSearchFilters: (filters: Partial<SearchPa
               startDate: e.target.value,
             });
           }}
-          class="px-4 py-2 border border-gray-200 rounded-md text-sm"
+          class="rounded-md border border-gray-200 px-4 py-2 text-sm"
         />
         <input
           type="date"
@@ -26,7 +26,7 @@ export function Filters(props: { updateSearchFilters: (filters: Partial<SearchPa
               endDate: e.target.value,
             });
           }}
-          class="px-4 py-2 border border-gray-200 rounded-md text-sm"
+          class="rounded-md border border-gray-200 px-4 py-2 text-sm"
         />
 
         <Show when={searchParams.startDate || searchParams.endDate}>
@@ -45,7 +45,7 @@ export function Filters(props: { updateSearchFilters: (filters: Partial<SearchPa
       </div>
 
       <div>
-        <label class="flex gap-1 cursor-pointer">
+        <label class="flex cursor-pointer gap-1">
           <input
             type="checkbox"
             class="cursor-pointer"

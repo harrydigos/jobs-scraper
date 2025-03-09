@@ -171,8 +171,8 @@ export function JobTable() {
   };
 
   return (
-    <main class="p-4 max-w-7xl mx-auto">
-      <div class="bg-white rounded-lg shadow p-6">
+    <main class="mx-auto max-w-7xl p-4">
+      <div class="rounded-lg bg-white p-6 shadow">
         <div>
           <Search updateSearchFilters={updateSearchFilters} />
           <Filters updateSearchFilters={updateSearchFilters} />
@@ -186,7 +186,7 @@ export function JobTable() {
 
         <div
           ref={tableContainerRef}
-          class="overflow-auto max-h-[75dvh] rounded-lg border border-gray-200"
+          class="max-h-[75dvh] overflow-auto rounded-lg border border-gray-200"
         >
           <table
             class="w-full"
