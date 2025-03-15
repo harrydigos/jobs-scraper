@@ -1,8 +1,9 @@
 import type { ColumnDef } from '@tanstack/solid-table';
-import { createSignal, Show } from 'solid-js';
+import { createSignal, For, Show } from 'solid-js';
 import { z } from 'zod';
 import { makePersisted } from '@solid-primitives/storage';
 import { JobsResponse } from '~/lib/queries';
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
 
 const urlSchema = z.string().url();
 
@@ -19,16 +20,19 @@ export const defaultColumns = [
       const isAggregated = info.row.original.isAggregated;
       const count = info.row.original.count;
       return (
-        <div class="inline-flex items-center gap-1">
-          <span>
-            <Show when={isAggregated} fallback={info.getValue<string>()}>
-              aggregated
-            </Show>
-          </span>
-          <Show when={count > 1}>
-            <span class="w-fit rounded-sm bg-stone-900 px-0.5 text-xs text-stone-100">{count}</span>
-          </Show>
-        </div>
+        <Show when={isAggregated} fallback={info.getValue<string>()}>
+          <Tooltip gutter={0}>
+            <TooltipTrigger class="inline-flex items-center gap-1">
+              <span>aggregated</span>
+              <span class="w-fit rounded-sm bg-stone-900 px-0.5 text-xs text-stone-100">
+                {count}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent class="flex max-h-40 flex-col gap-1 overflow-y-auto text-xs" as="ul">
+              <For each={info.row.original.ids}>{(id) => <li>{id}</li>}</For>
+            </TooltipContent>
+          </Tooltip>
+        </Show>
       );
     },
     size: 140,
