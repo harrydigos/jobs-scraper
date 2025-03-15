@@ -6,8 +6,8 @@ import { JobsResponse } from '~/lib/queries';
 
 const urlSchema = z.string().url();
 
-function truncate(value: string, maxLength: number) {
-  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
+function truncate(value: string | undefined, maxLength: number) {
+  return value && value.length > maxLength ? `${value.slice(0, maxLength)}...` : value || '';
 }
 
 export const defaultColumns = [
@@ -16,7 +16,7 @@ export const defaultColumns = [
     accessorKey: 'id',
     header: () => 'ID',
     cell: (info) => {
-      const isAggregated = !!info.row.original.isAggregated;
+      const isAggregated = info.row.original.isAggregated;
       return <>{isAggregated ? 'aggregated' : info.getValue()}</>;
     },
     size: 120,
@@ -51,14 +51,15 @@ export const defaultColumns = [
     id: 'remote',
     accessorKey: 'remote',
     header: () => 'Remote',
+    cell: (info) => truncate(info.getValue<string[]>()?.at(0), 30),
     size: 80,
   },
   {
-    id: 'location',
-    accessorKey: 'location',
+    id: 'locations',
+    accessorKey: 'locations',
     header: () => 'Location',
     size: 250,
-    cell: (info) => truncate(info.getValue<string>(), 30),
+    cell: (info) => truncate(info.getValue<string[]>()?.at(0), 30),
   },
   {
     id: 'timeSincePosted',
@@ -73,11 +74,11 @@ export const defaultColumns = [
     size: 120,
   },
   {
-    id: 'link',
-    accessorKey: 'link',
+    id: 'links',
+    accessorKey: 'links',
     header: () => 'Link',
     cell: (info) => {
-      const validationResult = urlSchema.safeParse(info.getValue());
+      const validationResult = urlSchema.safeParse(info.getValue<string[]>()?.at(0));
       return (
         <Show when={validationResult.success} fallback="-">
           <a href={validationResult.data} target="_blank" rel="noopener noreferrer">

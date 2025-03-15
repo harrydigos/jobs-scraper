@@ -12,6 +12,50 @@ import {
   sql,
 } from '@jobs-scraper/database';
 import dayjs from 'dayjs';
+import { omit, parseJsonArray } from './utils';
+
+const normalSelect = {
+  id: jobs.id,
+  ids: sql<string>`json_array(${jobs.id})`, // Wrapped for consistency
+  title: jobs.title,
+  company: jobs.company,
+  createdAt: jobs.createdAt,
+  updatedAt: jobs.updatedAt,
+  links: sql<string>`json_array(${jobs.link})`,
+  locations: sql<string>`json_array(${jobs.location})`,
+  companySizes: sql<string>`json_array(${jobs.companySize})`,
+  remote: sql<string>`json_array(${jobs.remote})`,
+  timeSincePosted: sql<string>`json_array(${jobs.timeSincePosted})`,
+  count: sql<number>`1`,
+  isAggregated: sql<number>`0`,
+};
+
+const aggregatedSelect = {
+  id: sql<string>`min(${jobs.id})`,
+  ids: sql<string>`json_group_array(${jobs.id})`,
+  title: jobs.title,
+  company: jobs.company,
+  createdAt: sql<string>`min(${jobs.createdAt})`,
+  updatedAt: sql<string>`max(${jobs.updatedAt})`,
+  links: sql<string>`json_group_array(distinct ${jobs.link})`,
+  locations: sql<string>`json_group_array(distinct ${jobs.location})`,
+  companySizes: sql<string>`json_group_array(distinct ${jobs.companySize})`,
+  remote: sql<string>`json_group_array(distinct ${jobs.remote})`,
+  timeSincePosted: sql<string>`json_group_array(distinct ${jobs.timeSincePosted})`,
+  count: sql<number>`count(*)`,
+  isAggregated: sql<number>`case when count(*) > 1 then 1 else 0 end`,
+};
+
+// TODO: these aren't used yet
+// description: jobs.description,
+// companyImgLink: jobs.companyImgLink,
+// isPromoted: jobs.isPromoted,
+// companyLink: jobs.companyLink,
+// jobInsights: jobs.jobInsights,
+// isReposted: jobs.isReposted,
+// skillsRequired: jobs.skillsRequired,
+// requirements: jobs.requirements,
+// applyLink: jobs.applyLink,
 
 export const getJobs = query(
   async (
@@ -33,50 +77,41 @@ export const getJobs = query(
 
     const isAggregated = aggregated === 'true';
 
-    const query = db
-      .select({
-        // TODO: aggregate the data of duplicate jobs
-        isAggregated: isAggregated
-          ? sql<number>`case when count(${jobs.title}) > 1 then 1 else 0 end`
-          : sql<number>`0`,
-        id: jobs.id,
-        title: jobs.title,
-        company: jobs.company,
-        createdAt: isAggregated ? sql<string>`MAX(${jobs.createdAt})` : jobs.createdAt,
-        updatedAt: isAggregated ? sql<string>`MAX(${jobs.updatedAt})` : jobs.updatedAt,
-        link: jobs.link,
-        location: jobs.location,
-        companySize: jobs.companySize,
-        remote: jobs.remote,
-        timeSincePosted: jobs.timeSincePosted,
+    let results;
 
-        // TODO: these aren't used yet
-        // description: jobs.description,
-        // companyImgLink: jobs.companyImgLink,
-        // isPromoted: jobs.isPromoted,
-        // companyLink: jobs.companyLink,
-        // jobInsights: jobs.jobInsights,
-        // isReposted: jobs.isReposted,
-        // skillsRequired: jobs.skillsRequired,
-        // requirements: jobs.requirements,
-        // applyLink: jobs.applyLink,
-      })
-      .from(jobs)
-      .where(
-        and(
-          cursor ? lt(jobs.updatedAt, cursor) : undefined,
-          or(like(jobs.title, search), like(jobs.company, search)),
-          between(jobs.updatedAt, start, end),
-        ),
-      )
-      .limit(50)
-      .orderBy(desc(jobs.updatedAt));
+    const whereClause = and(
+      cursor ? lt(jobs.updatedAt, cursor) : undefined,
+      or(like(jobs.title, search), like(jobs.company, search)),
+      between(jobs.updatedAt, start, end),
+    );
 
-    if (isAggregated) {
-      query.groupBy(jobs.title, jobs.company);
+    if (!isAggregated) {
+      results = await db
+        .select(normalSelect)
+        .from(jobs)
+        .where(whereClause)
+        .limit(50)
+        .orderBy(desc(jobs.updatedAt));
+    } else {
+      results = await db
+        .select(aggregatedSelect)
+        .from(jobs)
+        .where(whereClause)
+        .groupBy(jobs.title, jobs.company)
+        .limit(50)
+        .orderBy(desc(sql`max(${jobs.updatedAt})`));
     }
 
-    return await query;
+    return results.map((job) => ({
+      ...omit(job, ['companySizes']),
+      ids: parseJsonArray(job.ids),
+      links: parseJsonArray(job.links),
+      locations: parseJsonArray(job.locations),
+      companySize: parseJsonArray(job.companySizes).filter(Boolean).at(0) || null,
+      remote: parseJsonArray(job.remote),
+      timeSincePosted: parseJsonArray(job.timeSincePosted).filter(Boolean).at(0) || null,
+      isAggregated: job.isAggregated > 0,
+    }));
   },
   'jobs',
 );
