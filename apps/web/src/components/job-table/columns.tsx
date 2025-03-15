@@ -17,9 +17,21 @@ export const defaultColumns = [
     header: () => 'ID',
     cell: (info) => {
       const isAggregated = info.row.original.isAggregated;
-      return <>{isAggregated ? 'aggregated' : info.getValue()}</>;
+      const count = info.row.original.count;
+      return (
+        <div class="inline-flex items-center gap-1">
+          <span>
+            <Show when={isAggregated} fallback={info.getValue<string>()}>
+              aggregated
+            </Show>
+          </span>
+          <Show when={count > 1}>
+            <span class="w-fit rounded-sm bg-stone-900 px-0.5 text-xs text-stone-100">{count}</span>
+          </Show>
+        </div>
+      );
     },
-    size: 120,
+    size: 140,
   },
   {
     id: 'createdAt',
