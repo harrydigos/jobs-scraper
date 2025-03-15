@@ -1,4 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function parseJsonArray(jsonString: string | null): string[] {
   if (!jsonString) return [];
@@ -11,6 +12,7 @@ export function parseJsonArray(jsonString: string | null): string[] {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function omit<T extends Record<string, any>, Key extends keyof T>(
   object: T,
   keys: Key[],
@@ -23,4 +25,8 @@ export function omit<T extends Record<string, any>, Key extends keyof T>(
   }
 
   return result;
+}
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }

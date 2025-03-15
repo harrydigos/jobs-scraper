@@ -9,21 +9,26 @@
   "private": true,
   "dependencies": {
     "@jobs-scraper/database": "workspace:*",
+    "@kobalte/core": "^0.13.9",
     "@neodrag/solid": "^2.3.0",
     "@solid-primitives/scheduled": "^1.5.0",
     "@solid-primitives/storage": "^4.3.1",
     "@solidjs/router": "^0.15.3",
     "@solidjs/start": "^1.1.0",
     "@tanstack/solid-table": "^8.20.5",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
     "solid-js": "^1.9.4",
+    "tailwind-merge": "^3.0.2",
+    "tailwindcss-animate": "^1.0.7",
     "vinxi": "^0.5.3",
     "virtua": "^0.40.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.0.6",
-    "tailwindcss": "^4.0.6"
+    "@tailwindcss/vite": "^4.0.14",
+    "tailwindcss": "^4.0.14"
   },
   "engines": {
     "node": ">=18"
