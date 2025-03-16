@@ -75,10 +75,22 @@ export function JobTable() {
     if (fetchedJobs.state === 'ready') {
       if (nextCursor()) {
         if (searchParams.aggregated) {
-          return mergeAggregate(prev, fetchedJobs(), ['ids'], (j) => `${j.title}|${j.company}`, {
-            customAggregators: { ids: (a, b) => [...a, ...b] },
-            includeUnmatched: true,
-          });
+          return mergeAggregate(
+            prev,
+            fetchedJobs(),
+            {
+              ids: (a, b) => [...a, ...b],
+              isAggregated: () => true,
+              count: (a, b) => a + b,
+              locations: (a, b) => [...a, ...b], // FIX: this will allow duplicate values
+              links: (a, b) => [...a, ...b],
+              remote: (a, b) => [...a, ...b],
+            },
+            (j) => `${j.title}|${j.company}`,
+            {
+              includeUnmatched: true,
+            },
+          );
         }
         return [...prev, ...fetchedJobs()];
       }
@@ -176,14 +188,6 @@ export function JobTable() {
     setColumnOrder(newOrder);
     table.setColumnOrder(newOrder);
   };
-
-  createEffect(() => {
-    console.log({
-      totalAgg: jobs().filter((j) => j.isAggregated).length,
-      totals: jobs().length,
-      jobsData: jobs(),
-    });
-  });
 
   return (
     <main class="mx-auto max-w-7xl p-4">
