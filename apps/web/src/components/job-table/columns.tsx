@@ -41,13 +41,13 @@ export const defaultColumns = [
     id: 'createdAt',
     accessorKey: 'createdAt',
     header: () => 'Created At',
-    size: 250,
+    size: 160,
   },
   {
     id: 'updatedAt',
     accessorKey: 'updatedAt',
     header: () => 'Updated At',
-    size: 250,
+    size: 160,
   },
   {
     id: 'title',
@@ -81,7 +81,7 @@ export const defaultColumns = [
     id: 'timeSincePosted',
     accessorKey: 'timeSincePosted',
     header: () => 'Time Since Posted',
-    size: 160,
+    size: 180,
   },
   {
     id: 'companySize',
@@ -103,7 +103,7 @@ export const defaultColumns = [
         </Show>
       );
     },
-    size: 60,
+    size: 40,
   },
 ] satisfies ColumnDef<JobsResponse[0]>[];
 

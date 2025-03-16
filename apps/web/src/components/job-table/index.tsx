@@ -22,6 +22,7 @@ import {
 } from './utils';
 import { Search } from './search';
 import { throttle } from '@solid-primitives/scheduled';
+import { mergeAggregate } from '~/lib/utils';
 
 export function JobTable() {
   let tableContainerRef: HTMLDivElement | undefined;
@@ -39,7 +40,7 @@ export function JobTable() {
 
   const totalJobsCount = createAsync(() => getTotalJobs());
 
-  const [tableData] = createResource<JobsResponse, Array<string | null | undefined>>(
+  const [fetchedJobs] = createResource<JobsResponse, Array<string | null | undefined>>(
     () => [
       searchParams.search,
       searchParams.startDate,
@@ -66,24 +67,30 @@ export function JobTable() {
     },
   );
 
-  const jobsData = createMemo<JobsResponse>((prev) => {
-    if (tableData.state === 'errored') {
+  const jobs = createMemo<JobsResponse>((prev) => {
+    if (fetchedJobs.state === 'errored') {
       return [];
     }
 
-    if (tableData.state === 'ready') {
+    if (fetchedJobs.state === 'ready') {
       if (nextCursor()) {
-        return [...prev, ...tableData()];
+        if (searchParams.aggregated) {
+          return mergeAggregate(prev, fetchedJobs(), ['ids'], (j) => `${j.title}|${j.company}`, {
+            customAggregators: { ids: (a, b) => [...a, ...b] },
+            includeUnmatched: true,
+          });
+        }
+        return [...prev, ...fetchedJobs()];
       }
-      return tableData();
+      return fetchedJobs();
     }
 
     return prev;
-  }, tableData() || []);
+  }, fetchedJobs() || []);
 
   const table = createSolidTable({
     get data() {
-      return jobsData();
+      return jobs();
     },
     columns: defaultColumns,
     getCoreRowModel: getCoreRowModel(),
@@ -92,10 +99,10 @@ export function JobTable() {
     },
   });
 
-  const isReady = () => tableData.state === 'ready';
+  const isReady = () => fetchedJobs.state === 'ready';
 
   createEffect(() => {
-    const lastJob = jobsData()?.at(-1);
+    const lastJob = jobs()?.at(-1);
 
     const io = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting && isReady() && lastJob) {
@@ -169,6 +176,14 @@ export function JobTable() {
     setColumnOrder(newOrder);
     table.setColumnOrder(newOrder);
   };
+
+  createEffect(() => {
+    console.log({
+      totalAgg: jobs().filter((j) => j.isAggregated).length,
+      totals: jobs().length,
+      jobsData: jobs(),
+    });
+  });
 
   return (
     <main class="mx-auto max-w-7xl p-4">
