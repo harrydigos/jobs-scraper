@@ -36,7 +36,7 @@ export function ignoreResizeObserverError() {
 }
 
 export function isOrderChanged(
-  headers: Array<Header<JobsResponse[0], JobsResponse[0]>>,
+  headers: Array<Header<JobsResponse['data'][0], JobsResponse['data'][0]>>,
   newOrder: Array<string>,
 ) {
   if (headers.length !== newOrder.length) {

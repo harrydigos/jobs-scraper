@@ -12,7 +12,7 @@ function truncate(value: string | undefined, maxLength: number) {
 }
 
 function WithTooltip(props: {
-  info: CellContext<JobsResponse[0], unknown>;
+  info: CellContext<JobsResponse['data'][0], unknown>;
   renderWhenAgg: JSX.Element;
   renderTooltipContent: JSX.Element;
   fallback?: JSX.Element;
@@ -177,7 +177,7 @@ export const defaultColumns = [
     size: 60,
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-] satisfies ColumnDef<JobsResponse[0], any>[];
+] satisfies ColumnDef<JobsResponse['data'][0], any>[];
 
 export const [columnOrder, setColumnOrder] = makePersisted(
   // eslint-disable-next-line solid/reactivity

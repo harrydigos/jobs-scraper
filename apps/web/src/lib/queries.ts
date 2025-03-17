@@ -1,16 +1,5 @@
 import { query } from '@solidjs/router';
-import {
-  and,
-  between,
-  db,
-  desc,
-  getAllJobsCount,
-  jobs,
-  like,
-  lt,
-  or,
-  sql,
-} from '@jobs-scraper/database';
+import { and, between, db, desc, jobs, like, lt, or, sql } from '@jobs-scraper/database';
 import dayjs from 'dayjs';
 import { omit, parseJsonArray } from './utils';
 
@@ -79,11 +68,20 @@ export const getJobs = query(
 
     let results;
 
-    const whereClause = and(
-      cursor ? lt(jobs.updatedAt, cursor) : undefined,
+    let whereClause = and(
       or(like(jobs.title, search), like(jobs.company, search)),
       between(jobs.updatedAt, start, end),
     );
+
+    const countSelect = {
+      count: isAggregated
+        ? sql<number>`count(distinct concat(${jobs.title}, '|', ${jobs.company}))`
+        : sql<number>`count(*)`,
+    };
+
+    const totalCount = await db.select(countSelect).from(jobs).where(whereClause); // TODO: can be a separate request
+
+    whereClause = cursor ? and(lt(jobs.updatedAt, cursor), whereClause) : whereClause;
 
     if (!isAggregated) {
       results = await db
@@ -102,23 +100,21 @@ export const getJobs = query(
         .orderBy(desc(sql`max(${jobs.updatedAt})`));
     }
 
-    return results.map((job) => ({
-      ...omit(job, ['companySizes']),
-      ids: parseJsonArray(job.ids),
-      links: parseJsonArray(job.links),
-      locations: parseJsonArray(job.locations),
-      companySize: parseJsonArray(job.companySizes).filter(Boolean).at(0) || null,
-      remote: parseJsonArray(job.remote),
-      timeSincePosted: parseJsonArray(job.timeSincePosted).filter(Boolean).at(0) || null,
-      isAggregated: job.isAggregated > 0,
-    }));
+    return {
+      data: results.map((job) => ({
+        ...omit(job, ['companySizes']),
+        ids: parseJsonArray(job.ids),
+        links: parseJsonArray(job.links),
+        locations: parseJsonArray(job.locations),
+        companySize: parseJsonArray(job.companySizes).filter(Boolean).at(0) || null,
+        remote: parseJsonArray(job.remote),
+        timeSincePosted: parseJsonArray(job.timeSincePosted).filter(Boolean).at(0) || null, // TODO: take the most recent
+        isAggregated: job.isAggregated > 0,
+      })),
+      totalCount: totalCount?.[0]?.count || 0,
+    };
   },
   'jobs',
 );
 
 export type JobsResponse = Awaited<ReturnType<typeof getJobs>>;
-
-export const getTotalJobs = query(async () => {
-  'use server';
-  return await getAllJobsCount();
-}, 'jobs-count');

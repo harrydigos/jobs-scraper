@@ -1,7 +1,8 @@
-import { createAsync, useSearchParams } from '@solidjs/router';
+import { useSearchParams } from '@solidjs/router';
 import { createSolidTable, flexRender, getCoreRowModel, Header } from '@tanstack/solid-table';
 import {
   For,
+  Suspense,
   createEffect,
   createMemo,
   createResource,
@@ -9,7 +10,7 @@ import {
   onCleanup,
   untrack,
 } from 'solid-js';
-import { getJobs, getTotalJobs, JobsResponse } from '~/lib/queries';
+import { getJobs, JobsResponse } from '~/lib/queries';
 import { columnOrder, defaultColumns, setColumnOrder } from './columns';
 import { Virtualizer } from 'virtua/solid';
 import { createDraggable, DragEventData } from '@neodrag/solid';
@@ -38,8 +39,7 @@ export function JobTable() {
 
   const { draggable } = createDraggable();
 
-  const totalJobsCount = createAsync(() => getTotalJobs());
-
+  // @ts-expect-error fix ts issue
   const [fetchedJobs] = createResource<JobsResponse, Array<string | null | undefined>>(
     () => [
       searchParams.search,
@@ -48,7 +48,6 @@ export function JobTable() {
       nextCursor(),
       searchParams.aggregated,
     ],
-    // @ts-expect-error fix ts issue
     async ([search, startDate, endDate, cursor, aggregated]) => {
       const validatedParams = searchParamsSchema.safeParse({
         search,
@@ -67,7 +66,7 @@ export function JobTable() {
     },
   );
 
-  const jobs = createMemo<JobsResponse>((prev) => {
+  const jobs = createMemo<JobsResponse['data']>((prev) => {
     if (fetchedJobs.state === 'errored') {
       return [];
     }
@@ -77,7 +76,7 @@ export function JobTable() {
         if (searchParams.aggregated) {
           return mergeAggregate(
             prev,
-            fetchedJobs(),
+            fetchedJobs().data,
             {
               ids: aggUtils.arrays.concat,
               isAggregated: () => true,
@@ -92,13 +91,13 @@ export function JobTable() {
             },
           );
         }
-        return [...prev, ...fetchedJobs()];
+        return [...prev, ...fetchedJobs().data];
       }
-      return fetchedJobs();
+      return fetchedJobs().data;
     }
 
     return prev;
-  }, fetchedJobs() || []);
+  }, fetchedJobs()?.data || []);
 
   const table = createSolidTable({
     get data() {
@@ -150,7 +149,7 @@ export function JobTable() {
   };
 
   const handleDrag = throttle(
-    (header: Header<JobsResponse[0], JobsResponse[0]>, data: DragEventData) => {
+    (header: Header<JobsResponse['data'][0], JobsResponse['data'][0]>, data: DragEventData) => {
       if (untrack(() => !isDragging())) {
         return;
       }
@@ -175,7 +174,10 @@ export function JobTable() {
     150,
   );
 
-  const handleDragEnd = (header: Header<JobsResponse[0], JobsResponse[0]>, data: DragEventData) => {
+  const handleDragEnd = (
+    header: Header<JobsResponse['data'][0], JobsResponse['data'][0]>,
+    data: DragEventData,
+  ) => {
     setDropPosition(null);
     setIsDragging(false);
     const headers = table.getFlatHeaders();
@@ -197,7 +199,9 @@ export function JobTable() {
           <Filters updateSearchFilters={updateSearchFilters} />
 
           <div class="mt-4 text-sm text-gray-500">
-            Showing {table.getRowCount()} of total {totalJobsCount()?.[0].count || 0}
+            Showing {table.getRowCount()} of
+            {/* TODO: handle it with another signal to avoid the flashing */}
+            <Suspense> {fetchedJobs()?.totalCount || 0}</Suspense>
           </div>
         </div>
 
