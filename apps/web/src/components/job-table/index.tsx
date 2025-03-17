@@ -22,7 +22,7 @@ import {
 } from './utils';
 import { Search } from './search';
 import { throttle } from '@solid-primitives/scheduled';
-import { mergeAggregate } from '~/lib/utils';
+import { aggUtils, mergeAggregate } from '~/lib/utils/aggregate';
 
 export function JobTable() {
   let tableContainerRef: HTMLDivElement | undefined;
@@ -79,12 +79,12 @@ export function JobTable() {
             prev,
             fetchedJobs(),
             {
-              ids: (a, b) => [...a, ...b],
+              ids: aggUtils.arrays.concat,
               isAggregated: () => true,
-              count: (a, b) => a + b,
-              locations: (a, b) => [...a, ...b], // FIX: this will allow duplicate values
-              links: (a, b) => [...a, ...b],
-              remote: (a, b) => [...a, ...b],
+              count: aggUtils.numbers.sum,
+              locations: aggUtils.arrays.uniqueConcat,
+              links: aggUtils.arrays.uniqueConcat,
+              remote: aggUtils.arrays.uniqueConcat,
             },
             (j) => `${j.title}|${j.company}`,
             {
