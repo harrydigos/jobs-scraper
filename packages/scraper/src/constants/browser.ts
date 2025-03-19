@@ -7,7 +7,7 @@ export const LI_URLS = {
   jobView: 'https://www.linkedin.com/jobs/view',
 } as const;
 
-export const browserDefaults = {
+export const BROWSER_DEFAULTS = {
   headless: true,
   args: [
     '--no-sandbox',

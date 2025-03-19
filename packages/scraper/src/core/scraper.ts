@@ -1,10 +1,10 @@
 import { chromium } from 'playwright';
 import { JobDataExtractor } from '~/core/job-data-extractor';
 import { SELECTORS } from '~/constants/selectors';
-import { browserDefaults, LI_URLS } from '~/constants/browser';
+import { BROWSER_DEFAULTS, LI_URLS } from '~/constants/browser';
 import { getRandomArbitrary, sanitizeText, sleep } from '~/utils/utils';
 import { retry } from '~/utils/retry';
-import { createLogger } from '~/utils/logger';
+import { createLogger, LoggerType } from '~/utils/logger';
 import { FILTERS, URL_PARAMS } from '~/constants/filters';
 
 import type { Browser, Page } from 'playwright';
@@ -14,18 +14,24 @@ import type { Job } from '~/types/job';
 
 const NOOP = () => {};
 
-const logger = createLogger({
-  level: 'debug',
-  transports: ['console', 'file'],
-});
-
 const scrapedJobIds = new Set<string>();
 const activeSearches = new Set<number>();
 
 export class Scraper {
   #browser: Browser | null = null;
   #page: Page | null = null;
-  #scraperOptions: Pick<ScraperOptions, 'liAtCookie'> = { liAtCookie: '' };
+  #scraperOptions: Required<ScraperOptions> = {
+    liAtCookie: '',
+    browserOptions: BROWSER_DEFAULTS,
+    loggerEnabled: true,
+    loggerOptions: {
+      level: 'info',
+      transports: ['console'],
+      maxFileSize: 1024 * 1024 * 5, // 5MB
+      filePath: `logs/app.log`,
+    },
+    scrapedJobIds: [],
+  };
   #searchOptions: Required<SearchOptions> = {
     onScrape: NOOP,
     limit: 25,
@@ -33,12 +39,23 @@ export class Scraper {
     maxConcurrent: 3,
     filters: {},
   };
+  #logger: LoggerType | null = null;
 
   private constructor(opts: ScraperOptions) {
-    this.#scraperOptions = opts;
+    this.#scraperOptions = {
+      ...this.#scraperOptions,
+      ...opts,
+      browserOptions: { ...this.#scraperOptions.browserOptions, ...opts.browserOptions },
+      loggerOptions: { ...this.#scraperOptions.loggerOptions, ...opts.loggerOptions },
+    }; // TODO: add deep merge
+
     opts.scrapedJobIds?.forEach((id) => {
       scrapedJobIds.add(id);
     });
+
+    if (this.#scraperOptions.loggerEnabled) {
+      this.#logger = createLogger(this.#scraperOptions.loggerOptions);
+    }
   }
 
   static async initialize(opts: ScraperOptions) {
@@ -50,10 +67,13 @@ export class Scraper {
       process.exit(1);
     }
 
-    logger.info('Connecting to a scraping browser');
-    scraper.#browser = await chromium.launch({ ...browserDefaults, ...opts.browserOptions });
+    scraper.#logger?.info('Connecting to a scraping browser');
+    scraper.#browser = await chromium.launch({
+      ...opts.browserOptions,
+      ...scraper.#scraperOptions,
+    });
 
-    logger.info('Connected, navigating...');
+    scraper.#logger?.info('Connected, navigating...');
 
     const ctx = await scraper.#browser.newContext();
 
@@ -66,19 +86,19 @@ export class Scraper {
       },
     ]);
 
-    logger.debug('Cookie added');
+    scraper.#logger?.debug('Cookie added');
 
     scraper.#page = await ctx.newPage();
     await scraper.#page.goto(LI_URLS.home);
 
-    logger.debug('Home page');
+    scraper.#logger?.debug('Home page');
 
     if (!(await scraper.#isLoggedIn())) {
-      logger.error('Authentication failed. Please check your li_at cookie.');
+      scraper.#logger?.error('Authentication failed. Please check your li_at cookie.');
       throw new Error('Authentication failed. Please check your li_at cookie.');
     }
 
-    logger.info('Successfully authenticated!');
+    scraper.#logger?.info('Successfully authenticated!');
 
     return scraper;
   }
@@ -122,7 +142,7 @@ export class Scraper {
     }
 
     const urlStr = url.toString();
-    logger.info('Constructed url', urlStr);
+    this.#logger?.info('Constructed url', urlStr);
     return urlStr;
   }
 
@@ -132,10 +152,10 @@ export class Scraper {
 
   async #paginate(size = 25) {
     if (!this.#page) {
-      logger.error('Failed to load page');
+      this.#logger?.error('Failed to load page');
       throw new Error('🔴 Failed to load page');
     }
-    logger.debug('Navigate to next page');
+    this.#logger?.debug('Navigate to next page');
 
     const url = new URL(this.#page.url());
     const offset = Number(url.searchParams.get('start') ?? '0');
@@ -155,7 +175,7 @@ export class Scraper {
         }
       }, SELECTORS.chatPanel);
     } catch (e) {
-      logger.error('Failed to hide chat', e);
+      this.#logger?.error('Failed to hide chat', e);
     }
   }
 
@@ -167,7 +187,7 @@ export class Scraper {
         return true;
       }
     } catch (e) {
-      logger.error('Failed to accept cookies', e);
+      this.#logger?.error('Failed to accept cookies', e);
     }
   }
 
@@ -186,23 +206,23 @@ export class Scraper {
     return retry(
       async () => {
         if (!this.#page) {
-          logger.error('Failed to load page');
+          this.#logger?.error('Failed to load page');
           throw new Error('Failed to load page');
         }
 
-        logger.debug('Load jobs');
+        this.#logger?.debug('Load jobs');
 
         await this.#waitForSkeletonsToBeRemoved();
 
         if (await this.#page.getByText(/No matching jobs found./i).isVisible()) {
-          logger.info('No matching jobs found. Exiting');
+          this.#logger?.info('No matching jobs found. Exiting');
           return { success: false, totalJobs: 0 };
         }
 
         const list = this.#page.locator(SELECTORS.list).first();
 
         if (!list.isVisible()) {
-          logger.error('No job list found');
+          this.#logger?.error('No job list found');
           throw new Error('No job list found');
         }
 
@@ -226,7 +246,7 @@ export class Scraper {
           await this.#waitForSkeletonsToBeRemoved();
 
           if (Date.now() - startTime > timeoutDuration) {
-            logger.warn('Timeout reached, exiting scrolling loop.');
+            this.#logger?.warn('Timeout reached, exiting scrolling loop.');
             return { success: false, totalJobs: currentCount };
           }
 
@@ -241,7 +261,7 @@ export class Scraper {
         maxAttempts: 3,
         delayMs: 300,
         timeout: 30000,
-        onRetry: (err) => logger.warn('Retrying job load', err),
+        onRetry: (err) => this.#logger?.warn('Retrying job load', err),
       },
     );
   }
@@ -250,7 +270,7 @@ export class Scraper {
     return retry(
       async () => {
         if (!this.#page) {
-          logger.error('Failed to load page');
+          this.#logger?.error('Failed to load page');
           throw new Error('Failed to load page');
         }
 
@@ -265,7 +285,7 @@ export class Scraper {
         const isSuccess = isVisible && content.includes(jobId);
 
         if (!isSuccess) {
-          logger.error('Failed to load job details', { jobId });
+          this.#logger?.error('Failed to load job details', { jobId });
           throw new Error('Failed to load job details');
         }
 
@@ -277,30 +297,30 @@ export class Scraper {
         maxAttempts: 3,
         delayMs: 200,
         timeout: 2000,
-        onRetry: (err) => logger.warn('Retrying job details load', err),
+        onRetry: (err) => this.#logger?.warn('Retrying job details load', err),
       },
     );
   }
 
   async #extractJobsData(limit: number) {
     if (!this.#page) {
-      logger.error('Failed to load page');
+      this.#logger?.error('Failed to load page');
       throw new Error('Failed to load page');
     }
 
     let jobCount = 0;
-    const extractor = new JobDataExtractor(this.#page);
+    const extractor = new JobDataExtractor(this.#page, this.#logger);
 
     for (const job of await extractor.getJobCards()) {
       if (jobCount === limit) {
-        logger.info(`Extracted ${jobCount} jobs`);
+        this.#logger?.info(`Extracted ${jobCount} jobs`);
         return jobCount;
       }
 
       try {
         // Avoid scraping job if it's already scraped
         if (scrapedJobIds.has(job.id)) {
-          logger.info(`Job id: ${job.id} is already scraped. Skipping...`);
+          this.#logger?.info(`Job id: ${job.id} is already scraped. Skipping...`);
           continue;
         }
 
@@ -308,7 +328,7 @@ export class Scraper {
         const loadedDetails = await this.#loadJobDetails(job.id);
 
         if (!loadedDetails.success) {
-          logger.warn('Failed to load job details', { jobId: job.id });
+          this.#logger?.warn('Failed to load job details', { jobId: job.id });
           continue;
         }
 
@@ -333,18 +353,18 @@ export class Scraper {
 
         await this.#page.waitForTimeout(getRandomArbitrary(1500, 4000));
       } catch (e) {
-        logger.error(`Failed to process job ${job.id}`, e);
+        this.#logger?.error(`Failed to process job ${job.id}`, e);
         continue;
       }
     }
 
-    logger.info(`Extracted ${jobCount} jobs`);
+    this.#logger?.info(`Extracted ${jobCount} jobs`);
     return jobCount;
   }
 
   async #singleSearch(filters: Filters) {
     if (!this.#page) {
-      logger.error('Scraper not initialized');
+      this.#logger?.error('Scraper not initialized');
       throw new Error('Scraper not initialized');
     }
 
@@ -354,7 +374,7 @@ export class Scraper {
 
     await Promise.allSettled([this.#hideChat(), this.#acceptCookies()]);
 
-    logger.info('Search jobs page');
+    this.#logger?.info('Search jobs page');
 
     let processedJobs = 0;
     const limit = this.#searchOptions.limit;
@@ -363,16 +383,16 @@ export class Scraper {
       const loadedJobs = await this.#loadJobs();
 
       if (!loadedJobs.success && loadedJobs.totalJobs === 0) {
-        logger.warn('No jobs found on the current page');
+        this.#logger?.warn('No jobs found on the current page');
         return;
       }
 
-      logger.info(`Loaded ${loadedJobs.totalJobs} jobs`);
+      this.#logger?.info(`Loaded ${loadedJobs.totalJobs} jobs`);
 
       processedJobs += await this.#extractJobsData(limit - processedJobs);
 
       if (processedJobs >= limit) {
-        logger.info(`Job limit reached (${limit} jobs)`);
+        this.#logger?.info(`Job limit reached (${limit} jobs)`);
         break;
       }
 
@@ -390,7 +410,7 @@ export class Scraper {
     this.#searchOptions = { ...this.#searchOptions, ...opts };
 
     if (!this.#browser) {
-      logger.error('Scraper not initialized');
+      this.#logger?.error('Scraper not initialized');
       throw new Error('Scraper not initialized');
     }
 
@@ -416,9 +436,11 @@ export class Scraper {
         try {
           await scraper.#singleSearch({ ...this.#searchOptions.filters, ...filter });
         } catch (e) {
-          logger.error('Error in search:', e);
+          this.#logger?.error('Error in search:', e);
         } finally {
-          await scraper.close().catch((e) => logger.error('Error closing context for search', e));
+          await scraper
+            .close()
+            .catch((e) => this.#logger?.error('Error closing context for search', e));
         }
       } finally {
         activeSearches.delete(index);
@@ -445,7 +467,7 @@ export class Scraper {
     if (this.#page) {
       await this.#page.context().browser()?.close();
       this.#page = null;
-      logger.info('Scraper closed successfully');
+      this.#logger?.info('Scraper closed successfully');
     }
   }
 }

@@ -7,7 +7,7 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 type Transport = 'console' | 'file';
 type LogMeta = Record<string, unknown> | Error | unknown | undefined;
 
-export type LoggerConfig = {
+export type LoggerOptions = {
   level?: LogLevel;
   transports?: Transport[];
   filePath?: string;
@@ -30,17 +30,13 @@ export const LOG_EMOJIS = {
 
 class Logger {
   private static instance: Logger;
-  #config: Required<LoggerConfig>;
+  #config: Required<LoggerOptions>;
   #logStream?: WriteStream;
 
-  private constructor(config: LoggerConfig) {
+  private constructor(config: LoggerOptions) {
     this.#config = {
-      level: 'info',
-      transports: ['console'],
-      maxFileSize: 1024 * 1024 * 5, // 5MB
-      filePath: `logs/app.log`,
       ...config,
-    };
+    } as Required<LoggerOptions>;
 
     if (this.#config.transports.includes('file') && !this.#config.filePath) {
       throw new Error('File path required for file transport');
@@ -151,7 +147,7 @@ class Logger {
     this.#writeToTransports(this.#formatMessage('error', message, meta));
   }
 
-  static createLogger(config: LoggerConfig = {}) {
+  static createLogger(config: LoggerOptions) {
     if (!Logger.instance) {
       Logger.instance = new Logger(config);
     }
@@ -159,6 +155,8 @@ class Logger {
   }
 }
 
-export function createLogger(config: LoggerConfig = {}) {
+export function createLogger(config: LoggerOptions) {
   return Logger.createLogger(config);
 }
+
+export type LoggerType = ReturnType<typeof createLogger>;

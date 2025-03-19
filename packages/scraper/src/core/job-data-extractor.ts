@@ -1,17 +1,16 @@
-import type { Page } from 'playwright';
 import { SELECTORS } from '~/constants/selectors';
-import type { OptionalFieldsOnly } from '~/types/generics';
-import type { Job } from '~/types/job';
-import { createLogger } from '~/utils/logger';
 import { sanitizeText } from '~/utils/utils';
 
-const logger = createLogger({
-  level: 'debug',
-  transports: ['console', 'file'],
-});
+import type { Page } from 'playwright';
+import type { OptionalFieldsOnly } from '~/types/generics';
+import type { Job } from '~/types/job';
+import type { LoggerType } from '~/utils/logger';
 
 export class JobDataExtractor {
-  constructor(private page: Page) {}
+  constructor(
+    private page: Page,
+    private logger: LoggerType | null,
+  ) {}
 
   async getDescription() {
     return this.page.evaluate(
@@ -92,13 +91,13 @@ export class JobDataExtractor {
       await newPage.close();
       return url.toString();
     } catch (e) {
-      logger.error('Failed to get apply link', e);
+      this.logger?.error('Failed to get apply link', e);
       return '';
     }
   }
 
   async getJobCards() {
-    logger.debug('Extracting job cards');
+    this.logger?.debug('Extracting job cards');
     try {
       return await this.page.evaluate((selectors) => {
         return Array.from(document.querySelectorAll(selectors.jobs)).map((job) => {
@@ -121,7 +120,7 @@ export class JobDataExtractor {
         });
       }, SELECTORS);
     } catch (error) {
-      logger.error('Failed to extract job cards', error);
+      this.logger?.error('Failed to extract job cards', error);
       return [];
     }
   }
@@ -152,7 +151,7 @@ export class JobDataExtractor {
       if (result.status === 'fulfilled') {
         Reflect.set(jobDetails, key, result.value);
       } else {
-        logger.error(`Failed to extract job detail: ${key}`, result.reason);
+        this.logger?.error(`Failed to extract job detail: ${key}`, result.reason);
       }
     }
 
@@ -163,9 +162,9 @@ export class JobDataExtractor {
     const excludeFields = new Set(opts?.excludeFields || []);
 
     if (excludeFields.size) {
-      logger.debug('Extracting job details except', opts!.excludeFields!.join(', '));
+      this.logger?.debug('Extracting job details except', opts!.excludeFields!.join(', '));
     } else {
-      logger.debug('Extracting full job details');
+      this.logger?.debug('Extracting full job details');
     }
     const jobDetails = await this.#getJobDetails(excludeFields);
 
