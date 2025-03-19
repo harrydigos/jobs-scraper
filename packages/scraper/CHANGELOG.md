@@ -1,5 +1,11 @@
 # jobs-scraper
 
+## 0.0.4
+
+### Patch Changes
+
+- 7717061: Add logger options
+
 ## 0.0.3
 
 ### Patch Changes
