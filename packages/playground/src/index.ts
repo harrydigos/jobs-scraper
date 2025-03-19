@@ -1,5 +1,5 @@
 import { db, jobs, sql } from '@jobs-scraper/database';
-import { Job, Scraper } from 'jobs-scraper';
+import { type Job, Scraper } from 'jobs-scraper';
 
 function getJobIds() {
   return db.select({ id: jobs.id }).from(jobs);
@@ -26,6 +26,11 @@ async function main() {
       liAtCookie: process.env.LI_AT_COOKIE!,
       scrapedJobIds: jobIds,
       browserOptions: { headless: true },
+      loggerEnabled: true,
+      loggerOptions: {
+        level: 'debug',
+        transports: ['file', 'console'],
+      },
     });
 
     await scraper.searchJobs(

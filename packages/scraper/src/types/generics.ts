@@ -19,3 +19,5 @@ export type RequiredByKeys<
     [K in keyof Omit<T, Keys>]: T[K];
   }
 >;
+
+export type Nullish<T> = T | null | undefined;

@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { JobDataExtractor } from '~/core/job-data-extractor';
 import { SELECTORS } from '~/constants/selectors';
 import { BROWSER_DEFAULTS, LI_URLS } from '~/constants/browser';
-import { getRandomArbitrary, sanitizeText, sleep } from '~/utils/utils';
+import { deepMerge, getRandomArbitrary, sanitizeText, sleep } from '~/utils/utils';
 import { retry } from '~/utils/retry';
 import { createLogger, LoggerType } from '~/utils/logger';
 import { FILTERS, URL_PARAMS } from '~/constants/filters';
@@ -42,12 +42,7 @@ export class Scraper {
   #logger: LoggerType | null = null;
 
   private constructor(opts: ScraperOptions) {
-    this.#scraperOptions = {
-      ...this.#scraperOptions,
-      ...opts,
-      browserOptions: { ...this.#scraperOptions.browserOptions, ...opts.browserOptions },
-      loggerOptions: { ...this.#scraperOptions.loggerOptions, ...opts.loggerOptions },
-    }; // TODO: add deep merge
+    this.#scraperOptions = deepMerge(this.#scraperOptions, opts) as Required<ScraperOptions>;
 
     opts.scrapedJobIds?.forEach((id) => {
       scrapedJobIds.add(id);
