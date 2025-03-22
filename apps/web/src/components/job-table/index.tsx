@@ -2,7 +2,6 @@ import { useSearchParams } from '@solidjs/router';
 import { createSolidTable, flexRender, getCoreRowModel, Header } from '@tanstack/solid-table';
 import {
   For,
-  Suspense,
   createEffect,
   createMemo,
   createResource,
@@ -67,16 +66,16 @@ export function JobTable() {
     },
   );
 
-  const jobs = createMemo<JobsResponse['data']>((prev) => {
+  const jobs = createMemo<JobsResponse>((prev) => {
     if (fetchedJobs.state === 'errored') {
-      return [];
+      return { data: [], totalCount: 0 };
     }
 
     if (fetchedJobs.state === 'ready') {
       if (nextCursor()) {
         if (searchParams.aggregated) {
-          return mergeAggregate(
-            prev,
+          const computedData = mergeAggregate(
+            prev.data,
             fetchedJobs().data,
             {
               ids: aggUtils.arrays.concat,
@@ -91,18 +90,22 @@ export function JobTable() {
               includeUnmatched: true,
             },
           );
+          return { data: computedData, totalCount: prev.totalCount };
         }
-        return [...prev, ...fetchedJobs().data];
+        return {
+          data: [...prev.data, ...fetchedJobs().data],
+          totalCount: prev.totalCount,
+        };
       }
-      return fetchedJobs().data;
+      return fetchedJobs();
     }
 
     return prev;
-  }, fetchedJobs()?.data || []);
+  }, fetchedJobs());
 
   const table = createSolidTable({
     get data() {
-      return jobs();
+      return jobs()?.data || [];
     },
     columns: defaultColumns,
     getCoreRowModel: getCoreRowModel(),
@@ -114,7 +117,7 @@ export function JobTable() {
   const isReady = () => fetchedJobs.state === 'ready';
 
   createEffect(() => {
-    const lastJob = jobs()?.at(-1);
+    const lastJob = jobs()?.data?.at(-1);
 
     const io = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting && isReady() && lastJob) {
@@ -200,13 +203,9 @@ export function JobTable() {
           <Filters updateSearchFilters={updateSearchFilters} />
 
           <div class="mt-4 text-sm text-gray-500">
-            Showing {table.getRowCount()} of
-            {/* TODO: handle it with another signal to avoid the flashing */}
-            <Suspense> {fetchedJobs()?.totalCount || 0}</Suspense>
+            Showing {table.getRowCount()} of {jobs()?.totalCount || 0}
           </div>
         </div>
-
-        {/* <Show when={!isReady()}>Loading...</Show> */}
 
         <Table
           container={{
