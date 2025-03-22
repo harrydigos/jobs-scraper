@@ -74,13 +74,13 @@ export const defaultColumns = [
     id: 'createdAt',
     accessorKey: 'createdAt',
     header: () => 'Created At',
-    size: 160,
+    size: 200,
   },
   {
     id: 'updatedAt',
     accessorKey: 'updatedAt',
     header: () => 'Updated At',
-    size: 160,
+    size: 200,
   },
   {
     id: 'title',

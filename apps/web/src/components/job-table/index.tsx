@@ -24,10 +24,11 @@ import {
 import { Search } from './search';
 import { throttle } from '@solid-primitives/scheduled';
 import { aggUtils, mergeAggregate } from '~/lib/utils/aggregate';
+import { Table, TableCell, TableFooter, TableHeader, TableRow } from '../ui/table';
 
 export function JobTable() {
-  let tableContainerRef: HTMLDivElement | undefined;
-  let bottomElRef: HTMLTableSectionElement | undefined;
+  let tableContainerRef!: HTMLDivElement;
+  let bottomElRef!: HTMLTableSectionElement;
 
   const [searchParams, setSearchParams] = useSearchParams<SearchParams>();
   const [nextCursor, setNextCursor] = createSignal<string | null>(null);
@@ -121,14 +122,14 @@ export function JobTable() {
       }
     });
 
-    io.observe(bottomElRef!);
+    io.observe(bottomElRef);
     onCleanup(() => io.disconnect());
   });
 
   ignoreResizeObserverError();
 
   const updateSearchFilters = (params: Partial<SearchParams>) => {
-    tableContainerRef?.scrollTo({ top: 0 });
+    tableContainerRef.scrollTo({ top: 0 });
     setNextCursor(null);
     setSearchParams(params, { replace: true, scroll: true });
   };
@@ -207,67 +208,71 @@ export function JobTable() {
 
         {/* <Show when={!isReady()}>Loading...</Show> */}
 
-        <div
-          ref={tableContainerRef}
-          class="max-h-[75dvh] overflow-auto rounded-lg border border-gray-200"
+        <Table
+          container={{
+            ref: (el) => {
+              tableContainerRef = el;
+            },
+            class: 'max-h-[75dvh] overflow-auto rounded-lg border border-gray-200',
+          }}
+          class="w-full"
+          style={{
+            width: `${table.getTotalSize()}px`,
+          }}
         >
-          <table
-            class="w-full"
-            style={{
-              width: `${table.getTotalSize()}px`,
-            }}
+          <TableHeader class="sticky top-0 z-10">
+            <TableRow class="bg-gray-50 text-sm hover:bg-gray-50">
+              <For each={table.getFlatHeaders()}>
+                {(header) => (
+                  // Fot now just copy paste the styles because a directive can't be passed to a component
+                  // https://github.com/solidjs/solid/discussions/722
+                  <th
+                    use:draggable={{
+                      axis: 'x',
+                      bounds: 'parent',
+                      onDragStart: () => setIsDragging(true),
+                      onDrag: (data) => handleDrag(header, data),
+                      onDragEnd: (data) => handleDragEnd(header, data),
+                    }}
+                    class="text-muted-foreground h-10 px-2 text-left align-middle font-medium active:bg-blue-500/50 [&:has([role=checkbox])]:pr-0"
+                    classList={{
+                      'before:content-[""] before:absolute before:left-0 before:top-0 before:w-[3px] before:h-full before:bg-blue-500 before:z-10':
+                        dropPosition()?.index === header.index &&
+                        dropPosition()?.direction === 'left',
+                      'after:content-[""] after:absolute after:right-0 after:top-0 after:w-[3px] after:h-full after:bg-blue-500 after:z-10':
+                        dropPosition()?.index === header.index &&
+                        dropPosition()?.direction === 'right',
+                    }}
+                    style={{ width: `${header.getSize()}px` }}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </th>
+                )}
+              </For>
+            </TableRow>
+          </TableHeader>
+
+          <Virtualizer
+            scrollRef={tableContainerRef}
+            // startMargin={24} // table header height
+            startMargin={40} // table header height
+            data={table.getRowModel().rows}
+            as="tbody"
+            item={(props) => <TableRow class="hover:bg-gray-100" {...props} />}
           >
-            <thead class="sticky top-0 z-10">
-              <tr class="bg-gray-50 text-sm">
-                <For each={table.getFlatHeaders()}>
-                  {(header) => (
-                    <th
-                      use:draggable={{
-                        axis: 'x',
-                        bounds: 'parent',
-                        onDragStart: () => setIsDragging(true),
-                        onDrag: (data) => handleDrag(header, data),
-                        onDragEnd: (data) => handleDragEnd(header, data),
-                      }}
-                      class="active:bg-blue-500/50"
-                      classList={{
-                        'before:content-[""] before:absolute before:left-0 before:w-[3px] before:h-full before:bg-blue-500 before:z-20':
-                          dropPosition()?.index === header.index &&
-                          dropPosition()?.direction === 'left',
-                        'after:content-[""] after:absolute after:right-0 after:w-[3px] after:h-full after:bg-blue-500 after:z-20':
-                          dropPosition()?.index === header.index &&
-                          dropPosition()?.direction === 'right',
-                      }}
-                      style={{ width: `${header.getSize()}px` }}
-                    >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  )}
-                </For>
-              </tr>
-            </thead>
+            {(row) => (
+              <For each={row.getVisibleCells()}>
+                {(cell) => (
+                  <TableCell class="text-sm" style={{ width: `${cell.column.getSize()}px` }}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                )}
+              </For>
+            )}
+          </Virtualizer>
 
-            <Virtualizer
-              scrollRef={tableContainerRef}
-              startMargin={24} // table header height
-              data={table.getRowModel().rows}
-              as="tbody"
-              item={(props) => <tr class="hover:bg-gray-100" {...props} />}
-            >
-              {(row) => (
-                <For each={row.getVisibleCells()}>
-                  {(cell) => (
-                    <td class="text-sm" style={{ width: `${cell.column.getSize()}px` }}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  )}
-                </For>
-              )}
-            </Virtualizer>
-
-            <tfoot ref={bottomElRef} class="w-full" />
-          </table>
-        </div>
+          <TableFooter ref={bottomElRef} class="w-full" />
+        </Table>
       </div>
     </main>
   );
