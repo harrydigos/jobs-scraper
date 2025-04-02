@@ -5,7 +5,7 @@ export type Job = {
   company: string;
   location: string;
   description?: string | null;
-  companyImgLink?: string | null;
+  // companyImgLink?: string | null;
   companySize?: string | null;
   remote?: string | null;
   isPromoted?: boolean;

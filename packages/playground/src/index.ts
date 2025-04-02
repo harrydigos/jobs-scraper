@@ -1,10 +1,6 @@
 import { db, jobs, sql } from '@jobs-scraper/database';
 import { type Job, Scraper } from 'jobs-scraper';
 
-function getJobIds() {
-  return db.select({ id: jobs.id }).from(jobs);
-}
-
 async function createJob(job: Job) {
   return await db
     .insert(jobs)
@@ -18,76 +14,63 @@ async function createJob(job: Job) {
     });
 }
 
-async function main() {
-  const jobIds = await getJobIds().then((jobs) => jobs.map((j) => j.id));
+async function getJobIds() {
+  return await db
+    .select({ id: jobs.id })
+    .from(jobs)
+    .then((jobs) => jobs.map((j) => j.id));
+}
+
+(async function main() {
+  const jobIds = await getJobIds();
+
+  const scraper = await Scraper.initialize({
+    liAtCookie: process.env.LI_AT_COOKIE!,
+    scrapedJobIds: jobIds,
+    browserOptions: { headless: false },
+    loggerEnabled: true,
+    // loggerOptions: {
+    //   level: 'debug',
+    //   transports: ['file', 'console'],
+    // },
+  });
 
   try {
-    const scraper = await Scraper.initialize({
-      liAtCookie: process.env.LI_AT_COOKIE!,
-      scrapedJobIds: jobIds,
-      browserOptions: { headless: true },
-      loggerEnabled: true,
-      loggerOptions: {
-        level: 'debug',
-        transports: ['file', 'console'],
-      },
-    });
-
     await scraper.searchJobs(
       [
         {
-          keywords: 'frontend engineer',
+          keywords: 'software engineer',
           location: 'greece',
         },
         {
-          keywords: 'full stack engineer',
-          location: 'greece',
-        },
-        {
-          keywords: 'frontend engineer',
+          keywords: 'sofware engineer',
           location: 'European Union',
-        },
-        {
-          keywords: 'full stack engineer',
-          location: 'European Union',
-        },
-        {
-          keywords: 'frontend engineer',
-          location: 'European Economic Area',
-        },
-        {
-          keywords: 'full stack engineer',
-          location: 'European Economic Area',
+          remote: ['remote'],
         },
       ],
       {
         filters: {
           relevance: 'recent',
-          remote: ['remote'],
+          remote: ['remote', 'hybrid', 'onSite'],
           experience: ['mid-senior', 'associate', 'entry'],
           jobType: ['fulltime'],
           datePosted: '7',
         },
         limit: 100,
         fieldsToExlude: [
-          'description',
           'applyLink',
           'isReposted',
           'skillsRequired',
           'jobInsights',
-          'companyImgLink',
-          'jobInsights',
-          'skillsRequired',
+          // 'companyImgLink',
         ],
         maxConcurrent: 2,
         onScrape: (job) => createJob(job),
       },
     );
-
-    await scraper.close();
   } catch (error) {
     console.error('Error:', error);
+  } finally {
+    await scraper.close();
   }
-}
-
-main();
+})();

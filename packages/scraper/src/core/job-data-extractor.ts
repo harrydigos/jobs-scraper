@@ -110,7 +110,7 @@ export class JobDataExtractor {
             title: job.querySelector(selectors.jobTitle)?.textContent || '',
             link: link.toString(),
             company: job.querySelector(selectors.company)?.textContent || '',
-            companyImgLink: job.querySelector('img')?.getAttribute('src') || '',
+            // companyImgLink: job.querySelector('img')?.getAttribute('src') || '',
             isPromoted: Array.from(job.querySelectorAll('li')).some(
               (item) => item.textContent?.trim() === 'Promoted',
             ),
