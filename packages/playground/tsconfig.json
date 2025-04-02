@@ -14,5 +14,6 @@
     "forceConsistentCasingInFileNames": true,
     "allowImportingTsExtensions": true,
     "skipLibCheck": true
-  }
+  },
+  "references": [{ "path": "../scraper" }, { "path": "../database" }]
 }
