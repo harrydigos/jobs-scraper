@@ -28,7 +28,6 @@ async function getJobIds() {
     liAtCookie: process.env.LI_AT_COOKIE!,
     scrapedJobIds: jobIds,
     browserOptions: { headless: false },
-    loggerEnabled: true,
     // loggerOptions: {
     //   level: 'debug',
     //   transports: ['file', 'console'],

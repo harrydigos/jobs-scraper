@@ -4,7 +4,7 @@ import { SELECTORS } from '~/constants/selectors';
 import { BROWSER_DEFAULTS, LI_URLS } from '~/constants/browser';
 import { deepMerge, getRandomArbitrary, sanitizeText, sleep } from '~/utils/utils';
 import { retry } from '~/utils/retry';
-import { createLogger, LoggerType } from '~/utils/logger';
+import { createLogger, LoggerOptions, LoggerType } from '~/utils/logger';
 import { FILTERS, URL_PARAMS } from '~/constants/filters';
 
 import type { Browser, Page } from 'playwright';
@@ -14,22 +14,25 @@ import type { Job } from '~/types/job';
 
 const NOOP = () => {};
 
-const scrapedJobIds = new Set<string>();
-const activeSearches = new Set<number>();
+const ctx = {
+  scrapedJobIds: new Set<string>(),
+  activeSearches: new Set<number>(),
+} as const;
+
+const DEFAULT_LOGGER_OPTIONS = {
+  level: 'info',
+  transports: ['console'],
+  maxFileSize: 1024 * 1024 * 5, // 5MB
+  filePath: `logs/app.log`,
+} satisfies LoggerOptions;
 
 export class Scraper {
   #browser: Browser | null = null;
   #page: Page | null = null;
-  #scraperOptions: Required<ScraperOptions> = {
+  #scraperOptions: ScraperOptions = {
     liAtCookie: '',
     browserOptions: BROWSER_DEFAULTS,
-    loggerEnabled: true,
-    loggerOptions: {
-      level: 'info',
-      transports: ['console'],
-      maxFileSize: 1024 * 1024 * 5, // 5MB
-      filePath: `logs/app.log`,
-    },
+    loggerOptions: null, // Logger is disabled by default
     scrapedJobIds: [],
   };
   #searchOptions: Required<SearchOptions> = {
@@ -42,13 +45,21 @@ export class Scraper {
   #logger: LoggerType | null = null;
 
   private constructor(opts: ScraperOptions) {
-    this.#scraperOptions = deepMerge(this.#scraperOptions, opts) as Required<ScraperOptions>;
+    this.#scraperOptions = deepMerge(
+      this.#scraperOptions,
+      opts,
+      opts.loggerOptions
+        ? {
+            loggerOptions: deepMerge(DEFAULT_LOGGER_OPTIONS, opts.loggerOptions),
+          }
+        : null,
+    );
 
     opts.scrapedJobIds?.forEach((id) => {
-      scrapedJobIds.add(id);
+      ctx.scrapedJobIds.add(id);
     });
 
-    if (this.#scraperOptions.loggerEnabled) {
+    if (this.#scraperOptions.loggerOptions) {
       this.#logger = createLogger(this.#scraperOptions.loggerOptions);
     }
   }
@@ -63,10 +74,7 @@ export class Scraper {
     }
 
     scraper.#logger?.info('Connecting to a scraping browser');
-    scraper.#browser = await chromium.launch({
-      ...opts.browserOptions,
-      ...scraper.#scraperOptions,
-    });
+    scraper.#browser = await chromium.launch(scraper.#scraperOptions.browserOptions);
 
     scraper.#logger?.info('Connected, navigating...');
 
@@ -314,7 +322,7 @@ export class Scraper {
 
       try {
         // Avoid scraping job if it's already scraped
-        if (scrapedJobIds.has(job.id)) {
+        if (ctx.scrapedJobIds.has(job.id)) {
           this.#logger?.info(`Job id: ${job.id} is already scraped. Skipping...`);
           continue;
         }
@@ -329,7 +337,7 @@ export class Scraper {
 
         // Store the ID of the successfully scraped job asap to ensure
         // that concurrent scrapers won't attempt to scrape it again.
-        scrapedJobIds.add(job.id);
+        ctx.scrapedJobIds.add(job.id);
 
         const extractedJobsData = await extractor.extractJobDetails({
           excludeFields: this.#searchOptions.fieldsToExlude,
@@ -396,7 +404,7 @@ export class Scraper {
   }
 
   async searchJobs(filters: Filters[], opts: SearchOptions): Promise<void> {
-    if (activeSearches.size > 0) {
+    if (ctx.activeSearches.size > 0) {
       throw new Error(
         'Scraping is already in progress. Please wait for it to complete or create a new scraper instance.',
       );
@@ -420,9 +428,9 @@ export class Scraper {
 
     const processSearch = async (filterData: { filter: Filters; index: number }) => {
       const { filter, index } = filterData;
-      activeSearches.add(index);
+      ctx.activeSearches.add(index);
 
-      await sleep(getRandomArbitrary(2000, 5000));
+      await sleep(getRandomArbitrary(1000, 3000));
 
       try {
         const scraper = await Scraper.initialize(this.#scraperOptions);
@@ -438,7 +446,7 @@ export class Scraper {
             .catch((e) => this.#logger?.error('Error closing context for search', e));
         }
       } finally {
-        activeSearches.delete(index);
+        ctx.activeSearches.delete(index);
         nextSearch(processSearch);
       }
     };
@@ -450,7 +458,7 @@ export class Scraper {
     // wait until completion
     await new Promise<void>((res) => {
       const interval = setInterval(() => {
-        if (activeSearches.size === 0 && searchQueue.length === 0) {
+        if (ctx.activeSearches.size === 0 && searchQueue.length === 0) {
           clearInterval(interval);
           res();
         }
