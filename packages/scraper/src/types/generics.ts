@@ -21,3 +21,7 @@ export type RequiredByKeys<
 >;
 
 export type Nullish<T> = T | null | undefined;
+
+export type MergeTuple<T extends unknown[]> = T extends [infer First, ...infer Rest]
+  ? First & MergeTuple<Rest>
+  : unknown;

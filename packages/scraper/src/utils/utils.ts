@@ -1,4 +1,4 @@
-import type { Nullish } from '~/types/generics';
+import type { MergeTuple, Nullish } from '~/types/generics';
 
 export function sanitizeText(rawText: string | null | undefined) {
   return (
@@ -21,15 +21,15 @@ export function getRandomArbitrary(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
-export function deepMerge<T extends object>(...objects: Nullish<T>[]): T {
+export function deepMerge<T extends Nullish<object>[]>(...objects: T): MergeTuple<T> {
   const validObjects = objects.filter(Boolean) as T[];
 
   if (validObjects.length === 0) {
-    return {} as T;
+    return {} as MergeTuple<T>;
   }
 
   if (validObjects.length === 1) {
-    return structuredClone(validObjects[0]);
+    return structuredClone(validObjects[0]) as MergeTuple<T>;
   }
 
   const target = structuredClone(validObjects[0]);
@@ -69,5 +69,5 @@ export function deepMerge<T extends object>(...objects: Nullish<T>[]): T {
     }
   }
 
-  return target;
+  return target as MergeTuple<T>;
 }
