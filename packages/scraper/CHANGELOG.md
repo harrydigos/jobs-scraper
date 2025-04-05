@@ -1,5 +1,11 @@
 # jobs-scraper
 
+## 0.0.5
+
+### Patch Changes
+
+- 741b051: Improve scraper options
+
 ## 0.0.4
 
 ### Patch Changes
