@@ -26,3 +26,11 @@ export const SELECTORS = {
   applyButton: "button.jobs-apply-button[role='link']",
   list: '.scaffold-layout__list ul',
 } as const;
+
+export const MODAL_SELECTORS = {
+  closeButton: '.artdeco-modal.artdeco-modal--layer-default .artdeco-modal__dismiss',
+  content: {
+    shareProfileInfoButton: "input[role='switch'].artdeco-toggle__button",
+    applyButton: 'button[role="link"].jobs-apply-button',
+  },
+} as const;

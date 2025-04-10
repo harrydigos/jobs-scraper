@@ -22,16 +22,16 @@ async function getJobIds() {
 }
 
 (async function main() {
-  const jobIds = await getJobIds();
+  const _jobIds = await getJobIds();
 
   const scraper = await Scraper.initialize({
     liAtCookie: process.env.LI_AT_COOKIE!,
-    scrapedJobIds: jobIds,
+    scrapedJobIds: [],
     browserOptions: { headless: false },
-    // loggerOptions: {
-    //   level: 'debug',
-    //   transports: ['file', 'console'],
-    // },
+    loggerOptions: {
+      level: 'debug',
+      transports: ['console'],
+    },
   });
 
   try {
@@ -51,19 +51,18 @@ async function getJobIds() {
         filters: {
           relevance: 'recent',
           remote: ['remote', 'hybrid', 'onSite'],
-          experience: ['mid-senior', 'associate', 'entry'],
-          jobType: ['fulltime'],
+          experience: ['mid-senior', 'director'],
+          jobType: ['fulltime', 'parttime'],
           datePosted: '7',
         },
         limit: 100,
         fieldsToExlude: [
-          'applyLink',
           'isReposted',
           'skillsRequired',
           'jobInsights',
           // 'companyImgLink',
         ],
-        maxConcurrent: 2,
+        maxConcurrent: 1,
         onScrape: (job) => createJob(job),
       },
     );

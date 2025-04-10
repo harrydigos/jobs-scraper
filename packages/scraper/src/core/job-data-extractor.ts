@@ -1,4 +1,4 @@
-import { SELECTORS } from '~/constants/selectors';
+import { MODAL_SELECTORS, SELECTORS } from '~/constants/selectors';
 import { sanitizeText } from '~/utils/utils';
 
 import type { Page } from 'playwright';
@@ -79,16 +79,41 @@ export class JobDataExtractor {
       const applyButton = this.page.locator(SELECTORS.applyButton).first();
       if ((await applyButton.count()) === 0) return '';
 
-      const [newPage] = await Promise.all([
-        this.page.context().waitForEvent('page', { timeout: 8000 }),
-        applyButton.click(),
-      ]);
+      let maybeNewPage: Page | null = null;
+      try {
+        const [newPage] = await Promise.all([
+          this.page.context().waitForEvent('page', { timeout: 3000 }),
+          applyButton.click(),
+        ]);
+        maybeNewPage = newPage || null;
+      } catch (e) {
+        this.logger?.error('Failed to get apply link', e);
+      }
 
-      if (!newPage || newPage === this.page) return '';
+      if (
+        !maybeNewPage ||
+        new URL(maybeNewPage.url()).hostname === new URL(this.page.url()).hostname
+      ) {
+        await this.page.waitForSelector(MODAL_SELECTORS.content.applyButton, { timeout: 3000 });
 
-      const url = new URL(newPage.url());
+        const modalApplyButton = this.page
+          .locator(MODAL_SELECTORS.content.applyButton, {
+            hasText: /continue/i,
+          })
+          .first();
+
+        const [newPageFromModal] = await Promise.all([
+          this.page.context().waitForEvent('page', { timeout: 3000 }),
+          modalApplyButton.click(),
+        ]);
+        maybeNewPage = newPageFromModal;
+      }
+
+      if (!maybeNewPage) return '';
+
+      const url = new URL(maybeNewPage.url());
       url.search = '';
-      await newPage.close();
+      await maybeNewPage.close();
       return url.toString();
     } catch (e) {
       this.logger?.error('Failed to get apply link', e);
