@@ -150,11 +150,15 @@ export class JobDataExtractor {
     }
   }
 
+  #extractCompanyId(url: string) {
+    return url.match(/linkedin\.com\/company\/([^/]+)/)?.[1];
+  }
+
   async #getJobDetails(excludeFields: Set<keyof OptionalFieldsOnly<Job>> = new Set()) {
     const tasks = {
+      companyLink: this.getCompanyLink(),
       description: excludeFields.has('description') ? undefined : this.getDescription(),
       timeSincePosted: excludeFields.has('timeSincePosted') ? undefined : this.getTimeSincePosted(),
-      companyLink: excludeFields.has('companyLink') ? undefined : this.getCompanyLink(),
       skillsRequired: excludeFields.has('skillsRequired') ? undefined : this.getSkills(),
       requirements: excludeFields.has('requirements') ? undefined : this.getRequirements(),
       jobInsights: excludeFields.has('jobInsights') ? undefined : this.getJobInsights(),
@@ -193,11 +197,19 @@ export class JobDataExtractor {
     }
     const jobDetails = await this.#getJobDetails(excludeFields);
 
+    const companyLink = jobDetails.companyLink;
+    const companyId = this.#extractCompanyId(companyLink || '');
+
+    if (!companyLink || !companyId) {
+      return null;
+    }
+
     return {
+      companyLink,
+      companyId,
       description: jobDetails.description
         ? (jobDetails.description as unknown as string[]).map(sanitizeText).join('\n')
         : undefined,
-      companyLink: jobDetails.companyLink,
       jobInsights: jobDetails.jobInsights ? jobDetails.jobInsights.map(sanitizeText) : undefined,
       timeSincePosted: jobDetails.timeSincePosted,
       skillsRequired: jobDetails.skillsRequired,

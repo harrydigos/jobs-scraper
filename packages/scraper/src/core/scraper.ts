@@ -342,6 +342,12 @@ export class Scraper {
         const extractedJobsData = await extractor.extractJobDetails({
           excludeFields: this.#searchOptions.fieldsToExlude,
         });
+
+        if (!extractedJobsData) {
+          this.#logger?.error('Extraction of data failed. Skipping job.');
+          continue;
+        }
+
         const jobData = {
           ...job,
           company: sanitizeText(job.company),
