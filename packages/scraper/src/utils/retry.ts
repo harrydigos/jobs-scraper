@@ -1,6 +1,6 @@
 export type RetryResponse = {
   success: boolean;
-  errorMsg?: string;
+  [key: string]: unknown;
 };
 
 export type RetryOptions = {
@@ -23,10 +23,10 @@ export type RetryOptions = {
 /**
  * Retries a promise-based operation only when the promise rejects
  */
-export async function retry<T extends RetryResponse>(
+export async function retry<T>(
   operation: () => Promise<T>,
   config: RetryOptions,
-): Promise<T> {
+): Promise<T | RetryResponse> {
   const { maxAttempts, delayMs, onRetry, timeout } = config;
   const startTime = Date.now();
 
@@ -34,7 +34,7 @@ export async function retry<T extends RetryResponse>(
     try {
       // Check timeout before attempting
       if (timeout && Date.now() - startTime > timeout) {
-        throw new Error(`🔴 Operation timeout after ${timeout}ms`);
+        throw new Error(`Operation timeout after ${timeout}ms`);
       }
 
       return await operation();
@@ -42,22 +42,19 @@ export async function retry<T extends RetryResponse>(
       const lastError = e instanceof Error ? e : String(e);
 
       if (attempt === maxAttempts) {
+        onRetry?.(lastError, attempt);
         return {
           success: false,
-          errorMsg: `🔴 All ${maxAttempts} retry attempts failed. Last error: ${lastError}`,
-        } as T;
+        };
       }
 
       onRetry?.(lastError, attempt);
 
-      await new Promise(
-        (res) => setTimeout(res, delayMs * Math.pow(2, attempt - 1)), // Wait with exponential backoff
-      );
+      await new Promise((res) => setTimeout(res, delayMs * Math.pow(2, attempt - 1))); // Wait with exponential backoff
     }
   }
 
   return {
     success: false,
-    errorMsg: '🔴 Retry failed',
-  } as T;
+  };
 }

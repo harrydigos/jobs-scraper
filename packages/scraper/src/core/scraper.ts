@@ -195,13 +195,21 @@ export class Scraper {
   }
 
   async #waitForSkeletonsToBeRemoved() {
-    await Promise.allSettled(
-      SELECTORS.jobCardSkeletons.map((selector) =>
-        this.#page?.waitForSelector(selector, {
-          timeout: 3000,
-          state: 'detached',
-        }),
-      ),
+    await retry(
+      () =>
+        Promise.allSettled(
+          SELECTORS.jobCardSkeletons.map((selector) =>
+            this.#page?.waitForSelector(selector, {
+              timeout: 3000,
+              state: 'detached',
+            }),
+          ),
+        ),
+      {
+        maxAttempts: 3,
+        delayMs: 1000,
+        onRetry: (err) => this.#logger?.warn('Retrying waitForSkeletonsToBeRemoved', err),
+      },
     );
   }
 
@@ -360,7 +368,7 @@ export class Scraper {
         this.#searchOptions.onScrape(jobData);
         jobCount++;
 
-        await this.#page.waitForTimeout(getRandomArbitrary(1500, 4000));
+        await sleep(getRandomArbitrary(1500, 4000));
       } catch (e) {
         this.#logger?.error(`Failed to process job ${job.id}`, e);
         continue;
