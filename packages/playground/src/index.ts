@@ -27,7 +27,7 @@ async function getJobIds() {
   const scraper = await Scraper.initialize({
     liAtCookie: process.env.LI_AT_COOKIE!,
     scrapedJobIds: [],
-    browserOptions: { headless: false },
+    browserOptions: { headless: false, slowMo: 1000 },
     loggerOptions: {
       level: 'debug',
       transports: ['console'],
@@ -62,7 +62,7 @@ async function getJobIds() {
           'jobInsights',
           // 'companyImgLink',
         ],
-        maxConcurrent: 1,
+        maxConcurrent: 3,
         onScrape: (job) => createJob(job),
       },
     );

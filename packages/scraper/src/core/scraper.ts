@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { JobDataExtractor } from '~/core/job-data-extractor';
 import { SELECTORS } from '~/constants/selectors';
 import { BROWSER_DEFAULTS, LI_URLS } from '~/constants/browser';
-import { deepMerge, getRandomArbitrary, sanitizeText, sleep } from '~/utils/utils';
+import { deepMerge, sanitizeText, sleep } from '~/utils/utils';
 import { retry } from '~/utils/retry';
 import { createLogger, LoggerOptions, LoggerType } from '~/utils/logger';
 import { FILTERS, URL_PARAMS } from '~/constants/filters';
@@ -242,8 +242,6 @@ export class Scraper {
 
         let currentCount = 0;
 
-        await sleep(getRandomArbitrary(500, 1500));
-
         // Keep scrolling to the last item into view until no more items are loaded
         while (true) {
           await sleep(200);
@@ -367,8 +365,6 @@ export class Scraper {
 
         this.#searchOptions.onScrape(jobData);
         jobCount++;
-
-        await sleep(getRandomArbitrary(1500, 4000));
       } catch (e) {
         this.#logger?.error(`Failed to process job ${job.id}`, e);
         continue;
@@ -443,8 +439,6 @@ export class Scraper {
     const processSearch = async (filterData: { filter: Filters; index: number }) => {
       const { filter, index } = filterData;
       ctx.activeSearches.add(index);
-
-      await sleep(getRandomArbitrary(1000, 3000));
 
       try {
         const scraper = await Scraper.initialize(this.#scraperOptions);
