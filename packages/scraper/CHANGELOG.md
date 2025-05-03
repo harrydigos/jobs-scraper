@@ -1,5 +1,11 @@
 # jobs-scraper
 
+## 0.0.6
+
+### Patch Changes
+
+- b054758: Fix concurrency issues, handle apply modal, store company_id
+
 ## 0.0.5
 
 ### Patch Changes
