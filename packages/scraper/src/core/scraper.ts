@@ -428,6 +428,7 @@ export class Scraper {
     }
 
     const searchQueue = filters.map((filter, index) => ({ filter, index }));
+    const maxConcurrent = Math.min(this.#searchOptions.maxConcurrent, searchQueue.length);
 
     const nextSearch = (callback: (item: (typeof searchQueue)[0]) => void) => {
       const item = searchQueue.shift();
@@ -436,7 +437,7 @@ export class Scraper {
       }
     };
 
-    const processSearch = async (filterData: { filter: Filters; index: number }) => {
+    const processSearch = async (filterData: (typeof searchQueue)[0]) => {
       const { filter, index } = filterData;
       ctx.activeSearches.add(index);
 
@@ -459,7 +460,7 @@ export class Scraper {
       }
     };
 
-    for (let i = 0; i < Math.min(opts.maxConcurrent || 3, searchQueue.length); i++) {
+    for (let i = 0; i < maxConcurrent; i++) {
       nextSearch(processSearch);
     }
 

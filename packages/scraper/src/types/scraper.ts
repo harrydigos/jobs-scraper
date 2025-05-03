@@ -55,6 +55,10 @@ export type SearchOptions = {
   onScrape: (job: Job) => void;
   limit?: number;
   fieldsToExlude?: Array<keyof OptionalFieldsOnly<Job>>;
+  /**
+   * The maximum number of concurrent operations allowed during the scraping process.
+   * @default 3
+   */
   maxConcurrent?: number;
   filters?: OptionalFieldsOnly<Filters>;
 };
