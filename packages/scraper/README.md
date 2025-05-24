@@ -1,4 +1,4 @@
-# jos-scraper
+# jobs-scraper
 
 A powerful and efficient LinkedIn job scraper built with Node.js, TypeScript,
 and Playwright that allows you to extract job postings from LinkedIn with advanced filtering capabilities.
@@ -30,7 +30,7 @@ By using this library, you acknowledge and agree to:
 ## Installation
 
 ```bash
-npm install jobs-scraper playwright && npx playwright install
+npm install jobs-scraper playwright
 ```
 
 ## Prerequisites
