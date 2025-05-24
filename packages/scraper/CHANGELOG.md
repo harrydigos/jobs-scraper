@@ -1,5 +1,11 @@
 # jobs-scraper
 
+## 0.0.7
+
+### Patch Changes
+
+- 6cfb49c: Update readme
+
 ## 0.0.6
 
 ### Patch Changes
