@@ -5,6 +5,7 @@ import type { Page } from 'playwright';
 import type { OptionalFieldsOnly } from '~/types/generics';
 import type { Job } from '~/types/job';
 import type { LoggerType } from '~/utils/logger';
+import { LI_URLS } from '~/constants/browser';
 
 export class JobDataExtractor {
   constructor(
@@ -124,26 +125,33 @@ export class JobDataExtractor {
   async getJobCards() {
     this.logger?.debug('Extracting job cards');
     try {
-      return await this.page.evaluate((selectors) => {
-        return Array.from(document.querySelectorAll(selectors.jobs)).map((job) => {
-          const meta = (job.querySelector(selectors.cardMetadata)?.textContent || '').split('(');
-          const link = new URL(job.querySelector<HTMLAnchorElement>(selectors.jobLink)?.href || '');
-          link.search = '';
+      return await this.page.evaluate(
+        ([selectors, liUrls]) => {
+          return Array.from(document.querySelectorAll(selectors.jobs)).map((job) => {
+            const meta = (job.querySelector(selectors.cardMetadata)?.textContent || '').split('(');
+            const id = job.getAttribute('data-job-id') || '';
 
-          return {
-            id: job.getAttribute('data-job-id') || '',
-            title: job.querySelector(selectors.jobTitle)?.textContent || '',
-            link: link.toString(),
-            company: job.querySelector(selectors.company)?.textContent || '',
-            // companyImgLink: job.querySelector('img')?.getAttribute('src') || '',
-            isPromoted: Array.from(job.querySelectorAll('li')).some(
-              (item) => item.textContent?.trim() === 'Promoted',
-            ),
-            location: meta?.[0] || '',
-            remote: meta?.[1]?.replace(')', '') || '',
-          };
-        });
-      }, SELECTORS);
+            if (!id) {
+              throw new Error('Could not get job id');
+            }
+
+            return {
+              id,
+              title: job.querySelector(selectors.jobTitle)?.textContent || '',
+              link: `${liUrls.jobView}/${id}`,
+              company: job.querySelector(selectors.company)?.textContent || '',
+              // companyImgLink: job.querySelector('img')?.getAttribute('src') || '',
+              isPromoted: job
+                .querySelector(selectors.cardMetadataFooter)
+                ?.textContent?.toLowerCase()
+                ?.includes('promoted'),
+              location: meta?.[0] || '',
+              remote: meta?.[1]?.replace(')', '') || '',
+            };
+          });
+        },
+        [SELECTORS, LI_URLS] as const,
+      );
     } catch (error) {
       this.logger?.error('Failed to extract job cards', error);
       return [];
